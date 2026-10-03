@@ -25,8 +25,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { LockScreen } from './components/LockScreen';
 import { DocsHub } from './components/DocsHub';
 import { TerminalShell } from './components/TerminalShell';
-import { syncWithDiskBridge } from './storage/bridge';
-import { AlertCircle, X } from 'lucide-react';
+import { syncWithDiskBridge, subscribeToBridgeEvents } from './storage/bridge';
+import { AlertCircle, X, Terminal } from 'lucide-react';
 
 function createUniqueId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -41,7 +41,8 @@ function createConversation(selectedMode: Mode, initialStarter?: string): Conver
     mode: selectedMode,
     messages: [],
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    source: 'desktop_app'
   };
 }
 
@@ -69,6 +70,7 @@ export function App() {
   const [isDocsOpen, setIsDocsOpen] = useState(false);
   const [isShellOpen, setIsShellOpen] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [bridgeToast, setBridgeToast] = useState<{ id: string; title: string; convo: Conversation } | null>(null);
 
   // App Lock state
   const [isLocked, setIsLocked] = useState<boolean>(() => isAppLockConfigured());
@@ -99,6 +101,16 @@ export function App() {
     [settings]
   );
 
+  // Open an existing conversation
+  const handleOpenConversation = useCallback((convo: Conversation) => {
+    setActiveConvoId(convo.id);
+    setActiveConversationId(convo.id);
+    setCurrentMode(convo.mode);
+    setMessages(convo.messages);
+    setIsShellOpen(false);
+    setIsDocsOpen(false);
+  }, []);
+
   // Initial connection test on mount & bridge sync with CLI shell
   useEffect(() => {
     let isMounted = true;
@@ -115,10 +127,45 @@ export function App() {
       }
     });
 
+    // Subscribe to real-time events from terminal shell
+    const unsubscribe = subscribeToBridgeEvents((event) => {
+      if (!isMounted) return;
+      const updated = loadConversations();
+      setConversations(updated);
+
+      if (event.latest && event.latest.id !== activeConvoId) {
+        setBridgeToast({
+          id: event.latest.id,
+          title: event.latest.title || 'New Reflection',
+          convo: event.latest
+        });
+      }
+    });
+
     return () => {
       isMounted = false;
+      unsubscribe();
     };
-  }, [settings]);
+  }, [settings, activeConvoId]);
+
+  // Deep-linking via URL query params (?convo=... or ?reflection=...)
+  useEffect(() => {
+    const handleUrlParams = () => {
+      const params = new URLSearchParams(window.location.search);
+      const targetId = params.get('convo') || params.get('reflection');
+      if (targetId) {
+        const list = loadConversations();
+        const found = list.find((c) => c.id === targetId);
+        if (found) {
+          handleOpenConversation(found);
+        }
+      }
+    };
+
+    handleUrlParams();
+    window.addEventListener('popstate', handleUrlParams);
+    return () => window.removeEventListener('popstate', handleUrlParams);
+  }, [handleOpenConversation]);
 
   // Auto-lock inactivity listener
   useEffect(() => {
@@ -161,14 +208,6 @@ export function App() {
     if (initialStarter) {
       handleSendMessage(initialStarter, newConvo);
     }
-  };
-
-  // Open an existing conversation
-  const handleOpenConversation = (convo: Conversation) => {
-    setActiveConvoId(convo.id);
-    setActiveConversationId(convo.id);
-    setCurrentMode(convo.mode);
-    setMessages(convo.messages);
   };
 
   // Return to landing screen
@@ -264,7 +303,8 @@ export function App() {
       mode,
       messages: updatedMessages,
       createdAt: overrideConvo?.createdAt || Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      source: 'desktop_app'
     };
     saveConversation(interimConvo);
     setConversations(loadConversations());
@@ -310,10 +350,12 @@ export function App() {
         mode,
         messages: finalMessages,
         createdAt: overrideConvo?.createdAt || Date.now(),
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
+        source: 'desktop_app'
       };
       saveConversation(finalConvo);
       setConversations(loadConversations());
+      syncWithDiskBridge();
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setGlobalError(errMsg);
@@ -435,6 +477,7 @@ export function App() {
           setIsShellOpen(!isShellOpen);
           setIsDocsOpen(false);
         }}
+        onRefreshHistory={() => setConversations(loadConversations())}
       />
 
       {/* Global Error Banner */}
@@ -500,6 +543,38 @@ export function App() {
         )}
       </main>
 
+      {/* Real-time Bridge Notification Toast */}
+      {bridgeToast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 p-3.5 rounded-2xl bg-[#14151f] border border-amber-500/40 shadow-2xl animate-in slide-in-from-bottom-5 duration-200 max-w-sm">
+          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Terminal className="w-4 h-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-semibold">
+              Synced from Terminal Shell
+            </p>
+            <p className="text-xs text-zinc-200 font-medium truncate">
+              {bridgeToast.title}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              handleOpenConversation(bridgeToast.convo);
+              setBridgeToast(null);
+            }}
+            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 transition shadow"
+          >
+            Open
+          </button>
+          <button
+            onClick={() => setBridgeToast(null)}
+            className="p-1 text-zinc-500 hover:text-zinc-300 rounded"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* History Drawer */}
       <HistoryDrawer
         isOpen={isHistoryOpen}
@@ -509,6 +584,7 @@ export function App() {
         onSelectConversation={handleOpenConversation}
         onDeleteConversation={handleDeleteConversation}
         onDeleteAllData={handleDeleteAllData}
+        onRefreshConversations={() => setConversations(loadConversations())}
       />
 
       {/* Settings & Privacy Modal */}

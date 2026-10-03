@@ -31,10 +31,11 @@ const STORAGE_DIR = path.join(os.homedir(), '.unsaid');
 const STORAGE_FILE = path.join(STORAGE_DIR, 'reflections.json');
 
 const LM_STUDIO_URL = process.env.VITE_LM_STUDIO_BASE_URL || 'http://localhost:1234/v1';
-const DESKTOP_URL = 'http://localhost:5173';
+const DESKTOP_URL = process.env.VITE_DESKTOP_URL || 'http://localhost:5173';
 let activeModel = process.env.VITE_LM_STUDIO_MODEL || '';
 let piiMasking = false;
 let currentMode = null; // 'talk' | 'unload' | 'unsaid' | null
+let desktopOnline = false;
 
 // Ensure storage dir exists
 try {
@@ -50,7 +51,20 @@ function loadHistory() {
   }
 }
 
-function saveReflection(mode, userText, aiText) {
+async function checkDesktopBridge() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1200);
+    const res = await fetch(`${DESKTOP_URL}/api/bridge/status`, { signal: controller.signal });
+    clearTimeout(timeout);
+    desktopOnline = res.ok;
+  } catch {
+    desktopOnline = false;
+  }
+  return desktopOnline;
+}
+
+async function saveReflection(mode, userText, aiText) {
   try {
     const list = loadHistory();
     const now = Date.now();
@@ -68,15 +82,27 @@ function saveReflection(mode, userText, aiText) {
     };
 
     list.unshift(convo);
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(list.slice(0, 100), null, 2));
+    fs.writeFileSync(STORAGE_FILE, JSON.stringify(list.slice(0, 150), null, 2));
 
-    // Optional background sync with desktop server if active
-    fetch(`${DESKTOP_URL}/api/bridge/sync`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([convo])
-    }).catch(() => {});
-  } catch {}
+    // Synchronize with desktop server if active
+    let synced = false;
+    try {
+      const res = await fetch(`${DESKTOP_URL}/api/bridge/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([convo])
+      });
+      synced = res.ok;
+    } catch {}
+
+    if (synced) {
+      console.log(`${C.emerald}✓ Saved to ~/.unsaid/reflections.json & Synced to Desktop App.${C.reset}\n`);
+    } else {
+      console.log(`${C.dim}✓ Saved to ~/.unsaid/reflections.json (Desktop App offline).${C.reset}\n`);
+    }
+  } catch (err) {
+    console.log(`${C.rose}Error saving reflection: ${err.message}${C.reset}\n`);
+  }
 }
 
 const COMMON_BOUNDARIES = `
@@ -99,15 +125,20 @@ const SELF_HARM_REGEX = /\b(kill\s*myself|want\s*to\s*die|end\s*(my\s*life|it\s*
 
 function printBanner() {
   console.clear();
+  const bridgeText = desktopOnline
+    ? `${C.emerald}● Desktop App: Connected (${DESKTOP_URL})${C.reset}`
+    : `${C.zinc}○ Desktop App: Offline (Run 'app' to launch)${C.reset}`;
+
   console.log(`
 ${C.amber}   _   _                 _     _ ${C.reset}
 ${C.amber}  | | | |_ __  ___  __ _(_) __| |${C.reset}    ${C.bold}${C.white}UNSAID TERMINAL SHELL${C.reset}
 ${C.amber}  | | | | '_ \\/ __|/ _\` | |/ _\` |${C.reset}    ${C.dim}Linked with Unsaid Desktop App${C.reset}
 ${C.amber}  | |_| | | | \\__ \\ (_| | | (_| |${C.reset}    ${C.zinc}Local Gemma · LM Studio · Zero Cloud${C.reset}
-${C.amber}   \\___/|_| |_|___/\\__,_|_|\\__,_|${C.reset}    ${C.emerald}● Bridge: ~/.unsaid/reflections.json${C.reset}
+${C.amber}   \\___/|_| |_|___/\\__,_|_|\\__,_|${C.reset}    ${C.emerald}● Disk: ~/.unsaid/reflections.json${C.reset}
+                                      ${bridgeText}
 `);
   console.log(`${C.dim}────────────────────────────────────────────────────────────────────────────${C.reset}`);
-  console.log(`  Commands: ${C.bold}help${C.reset}, ${C.amber}talk${C.reset}, ${C.sky}unload${C.reset}, ${C.purple}unsaid${C.reset}, ${C.emerald}app${C.reset} (open desktop app), ${C.white}sync${C.reset}`);
+  console.log(`  Commands: ${C.bold}help${C.reset}, ${C.amber}talk${C.reset}, ${C.sky}unload${C.reset}, ${C.purple}unsaid${C.reset}, ${C.emerald}app${C.reset} (open desktop), ${C.emerald}open <#>${C.reset}, ${C.white}sync${C.reset}`);
   console.log(`${C.dim}────────────────────────────────────────────────────────────────────────────${C.reset}\n`);
 }
 
@@ -121,8 +152,8 @@ async function checkConnection() {
 
     if (res.ok) {
       const data = await res.json();
-      const models = Array.isArray(data?.data) ? data.data.map(m => m.id) : [];
-      const gemma = models.find(m => m.toLowerCase().includes('gemma')) || models[0];
+      const models = Array.isArray(data?.data) ? data.data.map((m) => m.id) : [];
+      const gemma = models.find((m) => m.toLowerCase().includes('gemma')) || models[0];
       if (gemma) activeModel = gemma;
 
       console.log(`${C.emerald}CONNECTED${C.reset}`);
@@ -150,6 +181,22 @@ function launchDesktopApp() {
   }
 }
 
+function openReflectionInDesktop(reflectionId) {
+  const targetUrl = `${DESKTOP_URL}/?convo=${encodeURIComponent(reflectionId)}`;
+  console.log(`${C.emerald}Opening reflection in Desktop App...${C.reset}`);
+  console.log(`${C.dim}${targetUrl}${C.reset}\n`);
+
+  if (process.platform === 'win32') {
+    // Attempt Microsoft Edge App mode or default browser
+    spawn('cmd.exe', ['/c', 'start', '', targetUrl], {
+      detached: true,
+      stdio: 'ignore'
+    }).unref();
+  } else {
+    spawn('open', [targetUrl], { detached: true, stdio: 'ignore' }).unref();
+  }
+}
+
 async function syncWithDesktop() {
   process.stdout.write(`${C.zinc}Syncing with Unsaid Desktop App... ${C.reset}`);
   try {
@@ -164,11 +211,13 @@ async function syncWithDesktop() {
       if (Array.isArray(result.data)) {
         fs.writeFileSync(STORAGE_FILE, JSON.stringify(result.data, null, 2));
       }
+      desktopOnline = true;
       console.log(`${C.emerald}SYNCED (${result.count || localHistory.length} reflections shared)${C.reset}`);
       return;
     }
   } catch {}
 
+  desktopOnline = false;
   console.log(`${C.amber}SAVED LOCALLY${C.reset}`);
   console.log(`  ${C.dim}Desktop server is offline. Reflections stored in ~/.unsaid/reflections.json${C.reset}`);
 }
@@ -248,10 +297,11 @@ async function streamReflection(mode, userText) {
     }
 
     process.stdout.write(`${C.reset}\n\n`);
-    saveReflection(mode, userText, fullResponse);
+    await saveReflection(mode, userText, fullResponse);
   } catch {
     console.log(`${C.rose}Could not reach local Gemma model via LM Studio.${C.reset}`);
-    console.log(`${C.dim}Tip: Start LM Studio, load Gemma, and start server on port 1234. (Or use the web preview at localhost:5173)${C.reset}\n`);
+    console.log(`${C.dim}Tip: Start LM Studio, load Gemma, and start server on port 1234.${C.reset}`);
+    console.log(`${C.zinc}You can also view reflections or preview in Desktop App at http://localhost:5173${C.reset}\n`);
   }
 }
 
@@ -263,7 +313,8 @@ function promptText() {
   return `${C.amber}unsaid${C.reset}> `;
 }
 
-export function startShell() {
+export async function startShell() {
+  await checkDesktopBridge();
   printBanner();
 
   const rl = readline.createInterface({
@@ -307,8 +358,9 @@ ${C.bold}Commands:${C.reset}
   ${C.sky}unload${C.reset} [dump]        Enter UNLOAD mode to dump thoughts without fixing
   ${C.purple}unsaid${C.reset} [words]       Enter UNSAID mode to explore words meant for someone
   ${C.emerald}app / desktop${C.reset}       Launch the Unsaid standalone Desktop App window
+  ${C.emerald}open <# | id>${C.reset}       Open a reflection directly in Desktop App
   ${C.emerald}sync${C.reset}                Bidirectionally synchronize with Desktop App
-  ${C.white}status${C.reset}               Check LM Studio & Gemma connection
+  ${C.white}status${C.reset}               Check LM Studio, Gemma, and Desktop App bridge
   ${C.white}history${C.reset}              View recent local reflections
   ${C.white}mask [on|off]${C.reset}        Toggle client-side PII scrubbing (${piiMasking ? C.emerald + 'ON' : C.zinc + 'OFF'}${C.reset})
   ${C.white}clear${C.reset}                Clear terminal screen
@@ -322,6 +374,34 @@ ${C.bold}Commands:${C.reset}
         launchDesktopApp();
         break;
 
+      case 'open': {
+        const items = loadHistory();
+        if (items.length === 0) {
+          console.log(`\n${C.dim}No reflections saved yet in history.${C.reset}\n`);
+          break;
+        }
+
+        let target = null;
+        if (!rest) {
+          target = items[0];
+        } else if (!isNaN(parseInt(rest))) {
+          const idx = parseInt(rest) - 1;
+          if (idx >= 0 && idx < items.length) {
+            target = items[idx];
+          }
+        } else {
+          target = items.find((i) => i.id === rest);
+        }
+
+        if (!target) {
+          console.log(`\n${C.rose}Reflection not found.${C.reset} Type 'history' to see numbered reflections.\n`);
+          break;
+        }
+
+        openReflectionInDesktop(target.id);
+        break;
+      }
+
       case 'sync':
         await syncWithDesktop();
         console.log('');
@@ -329,6 +409,9 @@ ${C.bold}Commands:${C.reset}
 
       case 'status':
         await checkConnection();
+        await checkDesktopBridge();
+        console.log(`  ${C.dim}Desktop Bridge:${C.reset} ${desktopOnline ? C.emerald + 'CONNECTED' : C.zinc + 'OFFLINE'}${C.reset} (${DESKTOP_URL})`);
+        console.log(`  ${C.dim}Storage File:${C.reset} ${C.white}${STORAGE_FILE}${C.reset}`);
         console.log('');
         break;
 
@@ -367,12 +450,12 @@ ${C.bold}Commands:${C.reset}
         if (items.length === 0) {
           console.log(`\n${C.dim}No reflections recorded yet in ~/.unsaid/reflections.json.${C.reset}\n`);
         } else {
-          console.log(`\n${C.bold}Recent Reflections (${items.length}):${C.reset}`);
+          console.log(`\n${C.bold}Recent Reflections (${items.length}):${C.reset} ${C.dim}(Type 'open <#>' to view in Desktop App)${C.reset}`);
           items.slice(0, 10).forEach((item, idx) => {
             const time = new Date(item.updatedAt || item.timestamp).toLocaleString();
             const modeColor = item.mode === 'talk' ? C.amber : item.mode === 'unload' ? C.sky : C.purple;
-            const userMsg = item.messages ? item.messages.find(m => m.role === 'user')?.content : item.userText;
-            const aiMsg = item.messages ? item.messages.find(m => m.role === 'assistant')?.content : item.aiText;
+            const userMsg = item.messages ? item.messages.find((m) => m.role === 'user')?.content : item.userText;
+            const aiMsg = item.messages ? item.messages.find((m) => m.role === 'assistant')?.content : item.aiText;
 
             console.log(`  ${C.dim}${idx + 1}.${C.reset} [${modeColor}${(item.mode || 'talk').toUpperCase()}${C.reset}] ${C.dim}${time}${C.reset} ${item.source === 'terminal_shell' ? C.emerald + '· Terminal' : C.sky + '· Desktop'}${C.reset}`);
             if (userMsg) console.log(`     ${C.white}You:${C.reset} ${userMsg.slice(0, 60)}${userMsg.length > 60 ? '...' : ''}`);
@@ -417,7 +500,58 @@ ${C.bold}Commands:${C.reset}
   });
 }
 
+// Handle direct CLI invocations (e.g. node bin/unsaid.js talk "hello", or node bin/unsaid.js app)
+async function handleCliArgs() {
+  const args = process.argv.slice(2);
+  if (args.length === 0) {
+    await startShell();
+    return;
+  }
+
+  const [cmd, ...rest] = args;
+  const content = rest.join(' ').trim();
+
+  if (cmd === 'app' || cmd === 'desktop' || cmd === 'gui') {
+    launchDesktopApp();
+    process.exit(0);
+  }
+
+  if (cmd === 'open') {
+    const items = loadHistory();
+    let target = items[0];
+    if (content && !isNaN(parseInt(content))) {
+      target = items[parseInt(content) - 1];
+    } else if (content) {
+      target = items.find((i) => i.id === content);
+    }
+    if (target) {
+      openReflectionInDesktop(target.id);
+    } else {
+      console.log(`Reflection not found.`);
+    }
+    process.exit(0);
+  }
+
+  if (cmd === 'sync') {
+    await syncWithDesktop();
+    process.exit(0);
+  }
+
+  if (cmd === 'talk' || cmd === 'unload' || cmd === 'unsaid') {
+    await checkConnection();
+    if (content) {
+      await streamReflection(cmd, content);
+    } else {
+      currentMode = cmd;
+      await startShell();
+    }
+    return;
+  }
+
+  await startShell();
+}
+
 // If executed directly from CLI
 if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
-  startShell();
+  handleCliArgs();
 }

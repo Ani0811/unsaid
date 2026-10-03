@@ -1,9 +1,10 @@
 import React from 'react';
 import type { Mode, ConnectionInfo } from '../types';
 import { MODES } from '../modes';
-import { Shield, Clock, Settings as SettingsIcon, PlusCircle, Sparkles, Lock, BookOpen, Terminal } from 'lucide-react';
+import { Shield, Clock, Settings as SettingsIcon, PlusCircle, Sparkles, Lock, BookOpen } from 'lucide-react';
 import { ConnectionBadge } from './ConnectionBadge';
 import { SoundscapeControl } from './SoundscapeControl';
+import { ShellBridgeControl } from './ShellBridgeControl';
 
 interface HeaderProps {
   currentMode: Mode | null;
@@ -21,6 +22,7 @@ interface HeaderProps {
   onToggleDocs: () => void;
   isShellOpen: boolean;
   onToggleShell: () => void;
+  onRefreshHistory?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -38,7 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   isDocsOpen,
   onToggleDocs,
   isShellOpen,
-  onToggleShell
+  onToggleShell,
+  onRefreshHistory
 }) => {
   return (
     <header className="sticky top-0 z-30 w-full backdrop-blur-md bg-[#0d0e12]/85 border-b border-zinc-800/80 px-4 sm:px-8 py-3 transition-colors">
@@ -94,19 +97,12 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Shell Toggle Button */}
-          <button
-            onClick={onToggleShell}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${
-              isShellOpen
-                ? 'bg-amber-500/20 border-amber-500/40 text-amber-200 font-semibold'
-                : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-zinc-800'
-            }`}
-            title={isShellOpen ? 'Exit Terminal Shell' : 'Open Interactive Terminal Shell'}
-          >
-            <Terminal className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">{isShellOpen ? 'Exit Shell' : 'Shell'}</span>
-          </button>
+          {/* Shell & Disk Bridge Control */}
+          <ShellBridgeControl
+            onToggleInAppShell={onToggleShell}
+            isInAppShellOpen={isShellOpen}
+            onRefreshData={onRefreshHistory}
+          />
 
           {/* Docs / Guide Toggle Button */}
           <button

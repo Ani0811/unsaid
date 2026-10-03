@@ -15,6 +15,7 @@ export interface Conversation {
   messages: Message[];
   createdAt: number;
   updatedAt: number;
+  source?: 'terminal_shell' | 'desktop_app' | string;
 }
 
 export interface LMStudioModel {
