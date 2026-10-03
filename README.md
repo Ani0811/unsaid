@@ -45,12 +45,25 @@ Your words never leave your hardware.
 │                        Unsaid                          │
 │               React 19 + TypeScript + Vite             │
 │                                                        │
-│     ┌──────────────┐  ┌──────────────┐  ┌───────────┐  │
-│     │  TALK Mode   │  │ UNLOAD Mode  │  │UNSAID Mode│  │
-│     └──────────────┘  └──────────────┘  └───────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  TALK Mode   │  │ UNLOAD Mode  │  │ UNSAID Mode  │  │
+│  └──────────────┘  └──────────────┘  └──────┬───────┘  │
+│                                             │          │
+│  ┌───────────────────────────────┐          │          │
+│  │ Ambient Soundscape Generator  │          ▼          │
+│  │ (Rain · Hearth · Drone)       │   ┌──────────────┐  │
+│  └───────────────────────────────┘   │Letter Studio │  │
+│                                      └──────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Security Guardrails & Privacy Engine             │  │
+│  │ • Local App Lock (SHA-256 PIN Protection)        │  │
+│  │ • Imminent Crisis & Self-Harm Safety Layer       │  │
+│  │ • Prompt Injection & Clinical Boundary Defense   │  │
+│  │ • PII & Identity Masker (Local Redaction)        │  │
+│  └──────────────────────────────────────────────────┘  │
 │                                                        │
 │            Browser localStorage (Local Only)           │
-│            Modular Safety & Grounding Layer            │
+│            Full Backup & Restore (JSON Archive)        │
 └───────────────────────────┬────────────────────────────┘
                             │
                             │ Local HTTP / REST
@@ -83,16 +96,48 @@ The distinctive reflection mode for unspoken words meant for a friend, partner, 
 - Clarify what you truly wish the other person understood.
 - Distinguish concrete facts from assumptions.
 - Turn raw emotion into honest, authentic expression.
+- **Letter & Perspective Studio:** Convert your reflections into an unsent letter draft with a reality check comparing *"What I know for sure (Observed Facts)"* vs *"What I am assuming (Their mind / intent)"*.
 - **Critical rule:** It will never pretend to know what the other person secretly thinks or feels (e.g. *"We don't know how they would respond, but it sounds like you wish they knew how much the friendship meant to you"*).
 
 ---
 
-## Modular Safety Layer
+## Desktop Shell & Native Launcher
 
-Unsaid includes a dedicated safety detector (`src/safety/detector.ts`). If input indicates imminent crisis, suicidal thoughts, or immediate self-harm:
-- Normal AI conversational generation is immediately halted.
-- A compassionate safety card is presented with immediate, actionable steps (moving away from harmful items, contacting trusted people nearby).
-- Direct access to free 24/7 crisis resources (e.g., **988 Lifeline**, **Crisis Text Line**, NHS 111, and international directories via [findahelpline.com](https://findahelpline.com)).
+Unsaid can run either in your browser or as a standalone desktop application window:
+
+### 1. One-Click Desktop Shell (Windows)
+Double-click `start-desktop.bat` or run:
+```bash
+npm run desktop
+```
+This automatically boots the local background server and opens Unsaid in a chromeless, standalone desktop window with native system integration, custom resolution, and zero extra Electron overhead!
+
+### 2. Cross-Platform Electron Shell
+The repository also includes `desktop/main.cjs` configured for native Electron window wrappers.
+
+---
+
+## Security Guardrails & Privacy Features
+
+1. **Local App Lock (PIN Protection):**
+   - Secure your room with a 4-8 digit PIN stored as a salted SHA-256 hash in local storage.
+   - Immediate lock button in the top navigation bar.
+   - Configurable auto-lock inactivity timer (1 min, 5 min, 15 min, 1 hour).
+2. **Prompt Injection & Clinical Boundary Guardrails:**
+   - Detects adversarial system overrides, jailbreak attempts, and demands for clinical/medical diagnoses.
+   - Automatically intercepts and delivers a grounded, non-prescriptive response.
+3. **PII & Identity Masker:**
+   - Optional client-side scrubber that redacts real names, emails, phone numbers, and IDs before passing text to the model or storage.
+4. **Crisis Safety Layer:**
+   - Detects imminent crisis or self-harm, stops conversational generation, and delivers 24/7 free helpline resources (988 US/CA, Crisis Text Line 741741, UK 111 / 116 123, and [findahelpline.com](https://findahelpline.com)).
+5. **Backup & Restore:**
+   - Download a full JSON archive of all local reflections and settings.
+   - Restore past backups on any device without cloud dependence.
+6. **Ambient Soundscapes:**
+   - Procedural Web Audio API sound generator with zero downloads:
+     - 🌧️ **Gentle Rain**
+     - 🔥 **Warm Hearth / Fireplace**
+     - 🎶 **Serene Drone Chords**
 
 ---
 
@@ -125,35 +170,12 @@ npm install
 3. Navigate to the **Local Server** tab (the `<->` icon on the left bar).
 4. Select your loaded Gemma model at the top.
 5. Click **Start Server** (default port: `1234`, endpoint: `http://localhost:1234/v1`).
-6. *Ensure "CORS" is toggled ON in LM Studio server settings (or rely on Unsaid's built-in dev proxy).*
 
-#### 4. Run Unsaid locally
-```bash
-npm run dev
-```
-
-Open your browser at `http://localhost:5173`.
-
-#### 5. Verify Local AI Connection
-- Look at the top-right connection badge:
-  - **● Local AI connected (Gemma · LM Studio)**
-- If offline, click **Test Connection** or adjust settings in the Settings dialog (gear icon).
+#### 4. Run Unsaid
+- **Desktop Window:** Run `start-desktop.bat` or `npm run desktop`
+- **Browser:** Run `npm run dev` and open `http://localhost:5173`
 
 *(Note: Unsaid also includes an optional "Offline Preview Simulator" in Settings so you can test all 3 modes and the complete UI flow even before downloading a model).*
-
----
-
-## Configuration
-
-Unsaid works out-of-the-box with default LM Studio settings. You can optionally configure settings via `.env` or directly in the UI Settings modal:
-
-```env
-# LM Studio OpenAI-compatible endpoint
-VITE_LM_STUDIO_BASE_URL=http://localhost:1234/v1
-
-# Optional specific model identifier (leave blank to auto-detect loaded model)
-VITE_LM_STUDIO_MODEL=
-```
 
 ---
 

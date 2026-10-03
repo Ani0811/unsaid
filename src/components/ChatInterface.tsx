@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { Mode, Message, ConnectionInfo } from '../types';
 import { MODES } from '../modes';
 import { SafetyBanner } from './SafetyBanner';
+import { LetterStudio } from './LetterStudio';
 import {
   Send,
   Trash2,
@@ -11,7 +12,8 @@ import {
   Sparkles,
   User,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from 'lucide-react';
 
 interface ChatInterfaceProps {
@@ -38,6 +40,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [input, setInput] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isLetterStudioOpen, setIsLetterStudioOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -137,6 +140,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </button>
             ))}
           </div>
+
+          {/* Letter Studio trigger in UNSAID mode */}
+          {mode === 'unsaid' && (
+            <button
+              onClick={() => setIsLetterStudioOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-purple-300 bg-purple-950/30 hover:bg-purple-950/50 border border-purple-500/30 transition mr-1"
+              title="Open Unsent Letter Draft Studio"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Letter Studio</span>
+            </button>
+          )}
 
           {messages.length > 0 && (
             <>
@@ -367,6 +382,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Letter Studio Modal */}
+      <LetterStudio
+        isOpen={isLetterStudioOpen}
+        onClose={() => setIsLetterStudioOpen(false)}
+        messages={messages}
+      />
     </div>
   );
 };

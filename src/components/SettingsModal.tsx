@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { Settings, ConnectionInfo } from '../types';
+import {
+  isAppLockConfigured,
+  setAppLockPin,
+  removeAppLockPin,
+  getAutoLockMinutes,
+  setAutoLockMinutes
+} from '../safety/appLock';
+import { downloadBackupFile, restoreBackupData } from '../storage/backup';
 import {
   X,
   Cpu,
@@ -8,7 +16,11 @@ import {
   RefreshCw,
   Trash2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Download,
+  Upload,
+  EyeOff
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -20,6 +32,7 @@ interface SettingsModalProps {
   isTestingConnection: boolean;
   onTestConnection: () => void;
   onDeleteAllData: () => void;
+  onRefreshData?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -30,12 +43,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   connectionInfo,
   isTestingConnection,
   onTestConnection,
-  onDeleteAllData
+  onDeleteAllData,
+  onRefreshData
 }) => {
-  const [activeTab, setActiveTab] = useState<'ai' | 'privacy' | 'about'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'security' | 'privacy' | 'about'>('ai');
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
+
+  // App Lock local state
+  const [hasPin, setHasPin] = useState(isAppLockConfigured);
+  const [newPin, setNewPin] = useState('');
+  const [pinNotice, setPinNotice] = useState<string | null>(null);
+  const [autoLockMin, setAutoLockMin] = useState(getAutoLockMinutes);
+
+  // Restore state
+  const [restoreNotice, setRestoreNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -47,13 +71,54 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const isConnected = connectionInfo.status === 'connected';
 
+  const handleSetPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPin.trim().length < 4) {
+      setPinNotice('PIN must be at least 4 digits');
+      return;
+    }
+    await setAppLockPin(newPin.trim());
+    setHasPin(true);
+    setNewPin('');
+    setPinNotice('PIN set successfully. App lock is now active.');
+    setTimeout(() => setPinNotice(null), 3000);
+  };
+
+  const handleRemovePin = () => {
+    removeAppLockPin();
+    setHasPin(false);
+    setPinNotice('PIN removed. App lock disabled.');
+    setTimeout(() => setPinNotice(null), 3000);
+  };
+
+  const handleAutoLockChange = (min: number) => {
+    setAutoLockMin(min);
+    setAutoLockMinutes(min);
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const res = restoreBackupData(content);
+      if (res.success) {
+        setRestoreNotice(`Restored ${res.count} reflection(s) successfully.`);
+        if (onRefreshData) onRefreshData();
+      } else {
+        setRestoreNotice(`Restore failed: ${res.error || 'Invalid file format'}`);
+      }
+      setTimeout(() => setRestoreNotice(null), 4000);
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity" onClick={onClose} />
 
       {/* Modal Card */}
       <div className="relative w-full max-w-xl bg-[#121319] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[90vh]">
@@ -61,7 +126,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="px-6 py-4 border-b border-zinc-800/80 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <h3 className="font-serif-reflect text-lg font-semibold text-zinc-100">
-              Settings & Privacy
+              Settings, Security & Privacy
             </h3>
           </div>
           <button
@@ -73,41 +138,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-zinc-800/80 px-6 bg-[#0f1015]">
+        <div className="flex border-b border-zinc-800/80 px-6 bg-[#0f1015] overflow-x-auto">
           <button
             onClick={() => setActiveTab('ai')}
-            className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-2 transition ${
+            className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-2 transition shrink-0 ${
               activeTab === 'ai'
                 ? 'border-amber-400 text-amber-300 font-semibold'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <Cpu className="w-3.5 h-3.5" />
-            <span>Local AI (LM Studio)</span>
+            <span>Local AI</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('privacy')}
-            className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-2 transition ${
-              activeTab === 'privacy'
+            onClick={() => setActiveTab('security')}
+            className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-2 transition shrink-0 ${
+              activeTab === 'security'
                 ? 'border-emerald-400 text-emerald-300 font-semibold'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <Shield className="w-3.5 h-3.5" />
-            <span>Privacy & Storage</span>
+            <Lock className="w-3.5 h-3.5" />
+            <span>Security & Guardrails</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('about')}
-            className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-2 transition ${
-              activeTab === 'about'
+            onClick={() => setActiveTab('privacy')}
+            className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-2 transition shrink-0 ${
+              activeTab === 'privacy'
                 ? 'border-purple-400 text-purple-300 font-semibold'
                 : 'border-transparent text-zinc-400 hover:text-zinc-200'
             }`}
           >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Backup & Storage</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('about')}
+            className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-2 transition shrink-0 ${
+              activeTab === 'about'
+                ? 'border-zinc-400 text-zinc-200 font-semibold'
+                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
             <Info className="w-3.5 h-3.5" />
-            <span>About Unsaid</span>
+            <span>About</span>
           </button>
         </div>
 
@@ -239,10 +316,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }
                   className="w-full accent-amber-400"
                 />
-                <div className="flex justify-between text-[10px] text-zinc-500">
-                  <span>More grounded (0.2)</span>
-                  <span>More exploratory (1.0)</span>
-                </div>
               </div>
 
               {/* Proxy toggle */}
@@ -287,26 +360,165 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {activeTab === 'privacy' && (
-            <div className="space-y-5">
-              <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-xs text-zinc-300 space-y-2">
-                <div className="flex items-center gap-2 font-semibold text-emerald-300">
-                  <Shield className="w-4 h-4" />
-                  <span>Private by design. Your reflections stay on this device.</span>
+          {activeTab === 'security' && (
+            <div className="space-y-6">
+              {/* App Lock PIN Section */}
+              <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span>Local App Lock (PIN Protection)</span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                      hasPin
+                        ? 'border-emerald-500/30 text-emerald-300 bg-emerald-500/10'
+                        : 'border-zinc-700 text-zinc-500'
+                    }`}
+                  >
+                    {hasPin ? 'Active' : 'Disabled'}
+                  </span>
                 </div>
-                <p className="leading-relaxed text-zinc-400">
-                  Unsaid does not require an account, has zero analytics or telemetry, and connects only to your local LM Studio instance on your computer. Your conversations are saved locally in your browser’s <code className="text-zinc-300">localStorage</code>.
+
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Require a PIN to view your reflections whenever you step away or reopen the room.
+                </p>
+
+                {hasPin ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span>Auto-lock after inactivity:</span>
+                      <select
+                        value={autoLockMin}
+                        onChange={(e) => handleAutoLockChange(parseInt(e.target.value, 10))}
+                        className="bg-[#181922] border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-300"
+                      >
+                        <option value={1}>1 minute</option>
+                        <option value={5}>5 minutes</option>
+                        <option value={15}>15 minutes</option>
+                        <option value={60}>1 hour</option>
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={handleRemovePin}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-300 hover:bg-rose-950/20 transition"
+                    >
+                      Remove PIN
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSetPin} className="flex gap-2 pt-1">
+                    <input
+                      type="password"
+                      maxLength={8}
+                      value={newPin}
+                      onChange={(e) => setNewPin(e.target.value)}
+                      placeholder="Set 4-8 digit PIN"
+                      className="bg-[#181922] border border-zinc-700 rounded-xl px-3 py-1.5 text-xs text-zinc-200 font-mono tracking-widest focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newPin.trim()}
+                      className="px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-medium text-xs disabled:opacity-50 transition"
+                    >
+                      Enable Lock
+                    </button>
+                  </form>
+                )}
+
+                {pinNotice && (
+                  <p className="text-xs text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{pinNotice}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* PII Masking Section */}
+              <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                    <EyeOff className="w-4 h-4 text-purple-400" />
+                    <span>Identity & PII Masker</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={localSettings.maskPII ?? false}
+                    onChange={(e) =>
+                      setLocalSettings({ ...localSettings, maskPII: e.target.checked })
+                    }
+                    className="w-4 h-4 accent-amber-400 rounded cursor-pointer"
+                  />
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Automatically scrubs personal identifiers (emails, phone numbers, and direct ID numbers) into generic placeholders before processing.
                 </p>
               </div>
 
-              <div className="space-y-3 pt-2">
+              {/* Prompt Injection & Guardrails Status */}
+              <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                  <Shield className="w-4 h-4 text-emerald-400" />
+                  <span>Boundary & Jailbreak Defense</span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Active by default. Prevents adversarial prompt injections, system boundary overrides, and clinical diagnosis impersonation.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'privacy' && (
+            <div className="space-y-6">
+              {/* Backup & Restore */}
+              <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
+                <h4 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider">
+                  Backup & Restore Reflections
+                </h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Export all your private reflections and settings as a clean JSON file, or restore a previous archive.
+                </p>
+
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    onClick={downloadBackupFile}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-200 bg-zinc-800 hover:bg-zinc-700 transition"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export Backup (JSON)</span>
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportFile}
+                    className="hidden"
+                  />
+
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-zinc-200 bg-zinc-800 hover:bg-zinc-700 transition"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Restore Backup</span>
+                  </button>
+                </div>
+
+                {restoreNotice && (
+                  <p className="text-xs text-emerald-400 mt-2 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{restoreNotice}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Data Purge */}
+              <div className="space-y-3 pt-1">
                 <h4 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider">
                   Storage Management
                 </h4>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  You can purge all conversation history and stored preferences at any time.
-                </p>
-
                 {showDeleteConfirm ? (
                   <div className="p-4 rounded-xl bg-rose-950/30 border border-rose-500/40 space-y-3">
                     <div className="flex items-center gap-2 text-rose-300 text-xs font-semibold">
@@ -314,7 +526,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span>Are you absolutely sure you want to delete all local data?</span>
                     </div>
                     <p className="text-[11px] text-zinc-300 leading-relaxed">
-                      This will erase all past reflections, active sessions, and custom settings stored on this browser. This cannot be undone.
+                      This will erase all past reflections, active sessions, and custom settings stored on this browser.
                     </p>
                     <div className="flex items-center gap-2">
                       <button
@@ -365,14 +577,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-2">
                 <h5 className="font-semibold text-zinc-200">Why Local AI?</h5>
                 <p>
-                  The things we hesitate to say out loud are often our most vulnerable thoughts. Sending them to a cloud AI SaaS platform means trusting third-party servers, training pipelines, and data brokers. Unsaid runs an open Gemma model completely offline via LM Studio, keeping every word strictly on your hardware.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <h5 className="font-semibold text-zinc-200">Important Positioning & Boundaries</h5>
-                <p>
-                  Unsaid is <strong>not</strong> an AI therapist, counselor, psychologist, medical application, or diagnostic system. It does not provide psychological classifications or pretend to know what someone else secretly thinks. It is a calm, reflective space to organize your own perspective.
+                  The things we hesitate to say out loud are often our most vulnerable thoughts. Sending them to a cloud AI SaaS platform means trusting third-party servers and cloud providers. Unsaid runs open Gemma weights completely offline via LM Studio, keeping every word strictly on your hardware.
                 </p>
               </div>
             </div>
@@ -396,14 +601,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               Close
             </button>
-            {activeTab === 'ai' && (
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-950 bg-zinc-100 hover:bg-white transition shadow-xs"
-              >
-                Save Settings
-              </button>
-            )}
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-950 bg-zinc-100 hover:bg-white transition shadow-xs"
+            >
+              Save Settings
+            </button>
           </div>
         </div>
       </div>

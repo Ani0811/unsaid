@@ -1,8 +1,9 @@
 import React from 'react';
 import type { Mode, ConnectionInfo } from '../types';
 import { MODES } from '../modes';
-import { Shield, Clock, Settings as SettingsIcon, PlusCircle, Sparkles } from 'lucide-react';
+import { Shield, Clock, Settings as SettingsIcon, PlusCircle, Sparkles, Lock } from 'lucide-react';
 import { ConnectionBadge } from './ConnectionBadge';
+import { SoundscapeControl } from './SoundscapeControl';
 
 interface HeaderProps {
   currentMode: Mode | null;
@@ -14,6 +15,8 @@ interface HeaderProps {
   connectionInfo: ConnectionInfo;
   isTestingConnection: boolean;
   onTestConnection: () => void;
+  isLockConfigured: boolean;
+  onLockApp: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,7 +28,9 @@ export const Header: React.FC<HeaderProps> = ({
   historyCount,
   connectionInfo,
   isTestingConnection,
-  onTestConnection
+  onTestConnection,
+  isLockConfigured,
+  onLockApp
 }) => {
   return (
     <header className="sticky top-0 z-30 w-full backdrop-blur-md bg-[#0d0e12]/85 border-b border-zinc-800/80 px-4 sm:px-8 py-3 transition-colors">
@@ -81,6 +86,9 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Ambient Soundscape Controller */}
+          <SoundscapeControl />
+
           {/* Compact Connection Badge */}
           <ConnectionBadge
             compact
@@ -89,6 +97,18 @@ export const Header: React.FC<HeaderProps> = ({
             onTestConnection={onTestConnection}
             onOpenSettings={onOpenSettings}
           />
+
+          {/* Lock App Button (if PIN set) */}
+          {isLockConfigured && (
+            <button
+              onClick={onLockApp}
+              className="p-1.5 rounded-lg text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 transition"
+              title="Lock this room"
+              aria-label="Lock App"
+            >
+              <Lock className="w-4 h-4" />
+            </button>
+          )}
 
           {/* New reflection button if in a conversation */}
           {currentMode && (

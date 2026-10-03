@@ -29,6 +29,7 @@ export interface Settings {
   temperature: number;
   useProxy: boolean;
   demoModeFallback: boolean;
+  maskPII?: boolean;
 }
 
 export type ConnectionStatus = 'checking' | 'connected' | 'offline' | 'error';

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Mode, Message, Conversation, Settings, ConnectionInfo } from './types';
 import { MODES } from './modes';
 import {
@@ -14,11 +14,15 @@ import {
 } from './storage/localStorage';
 import { testLMStudioConnection, generateReflection } from './ai/client';
 import { checkSafety } from './safety/detector';
+import { checkPromptGuardrails } from './safety/guardrails';
+import { maskPII } from './safety/pii';
+import { isAppLockConfigured, getAutoLockMinutes } from './safety/appLock';
 import { Header } from './components/Header';
 import { Landing } from './components/Landing';
 import { ChatInterface } from './components/ChatInterface';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { SettingsModal } from './components/SettingsModal';
+import { LockScreen } from './components/LockScreen';
 import { AlertCircle, X } from 'lucide-react';
 
 function createUniqueId(prefix: string): string {
@@ -61,6 +65,10 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
+  // App Lock state
+  const [isLocked, setIsLocked] = useState<boolean>(() => isAppLockConfigured());
+  const autoLockTimerRef = useRef<number | null>(null);
+
   // Connection testing state
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo>({
@@ -99,6 +107,33 @@ export function App() {
     };
   }, [settings]);
 
+  // Auto-lock inactivity listener
+  useEffect(() => {
+    if (!isAppLockConfigured()) return;
+
+    const resetTimer = () => {
+      if (autoLockTimerRef.current) {
+        window.clearTimeout(autoLockTimerRef.current);
+      }
+      const timeoutMs = getAutoLockMinutes() * 60 * 1000;
+      autoLockTimerRef.current = window.setTimeout(() => {
+        setIsLocked(true);
+      }, timeoutMs);
+    };
+
+    resetTimer();
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+
+    return () => {
+      if (autoLockTimerRef.current) {
+        window.clearTimeout(autoLockTimerRef.current);
+      }
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+    };
+  }, []);
+
   // Handle Mode Selection / Starting a Reflection
   const handleSelectMode = (selectedMode: Mode, initialStarter?: string) => {
     const newConvo = createConversation(selectedMode, initialStarter);
@@ -114,7 +149,6 @@ export function App() {
       handleSendMessage(initialStarter, newConvo);
     }
   };
-
 
   // Open an existing conversation
   const handleOpenConversation = (convo: Conversation) => {
@@ -134,19 +168,22 @@ export function App() {
   };
 
   // Send message
-  const handleSendMessage = async (text: string, overrideConvo?: Conversation) => {
+  const handleSendMessage = async (rawText: string, overrideConvo?: Conversation) => {
     const convoId = overrideConvo?.id || activeConvoId;
     const mode = overrideConvo?.mode || currentMode || 'talk';
 
-    if (!text.trim() || !convoId) return;
+    if (!rawText.trim() || !convoId) return;
 
-    // 1. Safety check
+    // Apply PII masking if enabled
+    const text = settings.maskPII ? maskPII(rawText).maskedText : rawText.trim();
+
+    // 1. Imminent crisis / self-harm safety check
     const safety = checkSafety(text);
 
     const userMessage: Message = {
       id: 'msg_' + Date.now(),
       role: 'user',
-      content: text.trim(),
+      content: text,
       timestamp: Date.now()
     };
 
@@ -161,6 +198,32 @@ export function App() {
       };
 
       const updated = [...messages, userMessage, safetyResponse];
+      setMessages(updated);
+
+      const targetConvo: Conversation = {
+        id: convoId,
+        title: messages.length === 0 ? text.slice(0, 40) + '...' : overrideConvo?.title || 'Reflection',
+        mode,
+        messages: updated,
+        createdAt: overrideConvo?.createdAt || Date.now(),
+        updatedAt: Date.now()
+      };
+      saveConversation(targetConvo);
+      setConversations(loadConversations());
+      return;
+    }
+
+    // 2. Prompt injection & clinical boundary guardrail check
+    const guardrail = checkPromptGuardrails(text);
+    if (!guardrail.passed) {
+      const guardrailResponse: Message = {
+        id: 'guard_' + Date.now(),
+        role: 'assistant',
+        content: guardrail.calmResponse || 'Unsaid operates strictly as a personal reflection space.',
+        timestamp: Date.now()
+      };
+
+      const updated = [...messages, userMessage, guardrailResponse];
       setMessages(updated);
 
       const targetConvo: Conversation = {
@@ -241,7 +304,7 @@ export function App() {
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setGlobalError(errMsg);
-      // Remove partial empty message if failed
+      // Revert to messages before empty failed response
       setMessages(updatedMessages);
     } finally {
       setIsGenerating(false);
@@ -311,10 +374,28 @@ export function App() {
     runConnectionCheck(newSettings);
   };
 
+  // Refresh data from backup import
+  const handleRefreshData = () => {
+    setConversations(loadConversations());
+    setSettings(loadSettings());
+    const activeId = getActiveConversationId();
+    if (activeId) {
+      const found = loadConversations().find((c) => c.id === activeId);
+      if (found) {
+        setMessages(found.messages);
+      }
+    }
+  };
+
   // Ambient glow selector
   const ambientClass = currentMode
     ? MODES[currentMode]?.glowClass || 'ambient-glow'
     : 'ambient-glow';
+
+  // If App Lock is active
+  if (isLocked) {
+    return <LockScreen onUnlock={() => setIsLocked(false)} />;
+  }
 
   return (
     <div className={`min-h-screen flex flex-col bg-[#0d0e12] text-[#e2e1e8] transition-all duration-700 ${ambientClass}`}>
@@ -329,6 +410,8 @@ export function App() {
         connectionInfo={connectionInfo}
         isTestingConnection={isTestingConnection}
         onTestConnection={() => runConnectionCheck()}
+        isLockConfigured={isAppLockConfigured()}
+        onLockApp={() => setIsLocked(true)}
       />
 
       {/* Global Error Banner */}
@@ -399,6 +482,7 @@ export function App() {
         isTestingConnection={isTestingConnection}
         onTestConnection={() => runConnectionCheck()}
         onDeleteAllData={handleDeleteAllData}
+        onRefreshData={handleRefreshData}
       />
     </div>
   );
