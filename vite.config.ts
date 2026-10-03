@@ -11,29 +11,11 @@ function unsaidBridgePlugin() {
   const storageFile = path.join(storageDir, 'reflections.json')
   const sseClients = new Set<any>()
 
-  // Watch file for changes outside the browser (e.g. from native CLI shell)
-  try {
-    if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true })
-    if (fs.existsSync(storageFile)) {
-      fs.watchFile(storageFile, { interval: 1000 }, (curr, prev) => {
-        if (curr.mtimeMs !== prev.mtimeMs) {
-          try {
-            const data = JSON.parse(fs.readFileSync(storageFile, 'utf-8'))
-            const payload = JSON.stringify({ type: 'disk_change', count: data.length, latest: data[0] })
-            for (const client of sseClients) {
-              client.write(`data: ${payload}\n\n`)
-            }
-          } catch {}
-        }
-      })
-    }
-  } catch {}
-
-  function broadcastSync(existing: any[], incomingLatest?: any) {
+  function broadcastShellReflection(convo: any, count: number) {
     const payload = JSON.stringify({
-      type: 'sync',
-      count: existing.length,
-      latest: incomingLatest || existing[0]
+      type: 'shell_reflection',
+      count,
+      convo
     })
     for (const client of sseClients) {
       try {
@@ -126,12 +108,20 @@ function unsaidBridgePlugin() {
               }
 
               const existingMap = new Map(existing.map((item) => [item.id, item]))
+              let hasNewTerminalReflection = false
+              let newTerminalItem: any = null
+
               for (const item of incoming) {
                 if (item && item.id) {
+                  const isNew = !existingMap.has(item.id)
                   existingMap.set(item.id, {
                     ...existingMap.get(item.id),
                     ...item
                   })
+                  if (isNew && item.source === 'terminal_shell') {
+                    hasNewTerminalReflection = true
+                    newTerminalItem = item
+                  }
                 }
               }
 
@@ -139,8 +129,10 @@ function unsaidBridgePlugin() {
               existing.sort((a, b) => (b.updatedAt || b.timestamp || 0) - (a.updatedAt || a.timestamp || 0))
               fs.writeFileSync(storageFile, JSON.stringify(existing.slice(0, 150), null, 2))
 
-              // Broadcast update to all connected web/desktop instances
-              broadcastSync(existing, incoming[0])
+              // Broadcast update to web app ONLY when a new terminal reflection is saved
+              if (hasNewTerminalReflection && newTerminalItem) {
+                broadcastShellReflection(newTerminalItem, existing.length)
+              }
 
               res.setHeader('Content-Type', 'application/json')
               return res.end(JSON.stringify({ success: true, count: existing.length, data: existing }))

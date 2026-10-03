@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { Mode, ConnectionInfo, Conversation } from '../types';
 import { MODES } from '../modes';
 import { ConnectionBadge } from './ConnectionBadge';
@@ -25,6 +25,11 @@ export const Landing: React.FC<LandingProps> = ({
   onOpenSettings,
   onOpenDocs
 }) => {
+  const displayConversations = useMemo(
+    () => recentConversations.slice(0, 4),
+    [recentConversations]
+  );
+
   return (
     <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-16 space-y-12">
       {/* Hero Section */}
@@ -179,7 +184,7 @@ export const Landing: React.FC<LandingProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {recentConversations.slice(0, 4).map((convo) => {
+            {displayConversations.map((convo) => {
               const modeConfig = MODES[convo.mode];
               const dateStr = new Date(convo.updatedAt).toLocaleDateString(undefined, {
                 month: 'short',

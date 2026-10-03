@@ -43,16 +43,10 @@ export const ShellBridgeControl: React.FC<ShellBridgeControlProps> = ({
     fetchBridgeStatus().then((s) => {
       if (isMounted) setStatus(s);
     });
-    const interval = setInterval(() => {
-      fetchBridgeStatus().then((s) => {
-        if (isMounted) setStatus(s);
-      });
-    }, 5000);
     return () => {
       isMounted = false;
-      clearInterval(interval);
     };
-  }, []);
+  }, [isOpen]);
 
   const handleSyncNow = async () => {
     setIsSyncing(true);

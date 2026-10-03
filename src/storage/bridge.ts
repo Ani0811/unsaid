@@ -17,10 +17,19 @@ export interface BridgeStatus {
   connectedClients?: number;
 }
 
+let isSyncInProgress = false;
+
 /**
  * Synchronizes local browser reflections with ~/.unsaid/reflections.json on disk.
+ * Protected against concurrent execution loops.
  */
 export async function syncWithDiskBridge(): Promise<BridgeSyncResult> {
+  if (isSyncInProgress) {
+    const cached = loadConversations();
+    return { success: true, count: cached.length, data: cached };
+  }
+
+  isSyncInProgress = true;
   try {
     const local = loadConversations();
     const res = await fetch('/api/bridge/sync', {
@@ -45,6 +54,8 @@ export async function syncWithDiskBridge(): Promise<BridgeSyncResult> {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, count: 0, error: msg };
+  } finally {
+    isSyncInProgress = false;
   }
 }
 
@@ -65,13 +76,13 @@ export async function fetchBridgeStatus(): Promise<BridgeStatus> {
 
 /**
  * Subscribes to real-time bridge updates via Server-Sent Events (SSE).
- * Also runs a periodic poll check to ensure no reflections are missed.
+ * Only fires when the terminal shell adds a new reflection.
+ * No polling loops, no cascading renders.
  */
 export function subscribeToBridgeEvents(
-  onUpdate: (event: { type: string; count?: number; latest?: Conversation }) => void
+  onUpdate: (event: { type: string; count?: number; convo?: Conversation }) => void
 ): () => void {
   let eventSource: EventSource | null = null;
-  let pollInterval: ReturnType<typeof setInterval> | null = null;
 
   try {
     eventSource = new EventSource('/api/bridge/events');
@@ -79,46 +90,29 @@ export function subscribeToBridgeEvents(
     eventSource.onmessage = (e) => {
       try {
         const payload = JSON.parse(e.data);
-        if (payload.type === 'sync' || payload.type === 'disk_change') {
-          // Sync with local storage
-          syncWithDiskBridge().then((res) => {
-            onUpdate({
-              type: payload.type,
-              count: res.count,
-              latest: payload.latest || res.data?.[0]
-            });
+        if (payload.type === 'shell_reflection' && payload.convo) {
+          // Ingest reflection directly into local storage without re-requesting server
+          saveConversation(payload.convo);
+          onUpdate({
+            type: 'shell_reflection',
+            count: payload.count,
+            convo: payload.convo
           });
         }
       } catch {}
     };
 
     eventSource.onerror = () => {
-      // If SSE errors out, fallback to regular polling
+      // Automatic browser reconnect handled by EventSource
     };
   } catch {
-    // EventSource not supported or failed to initialize
+    // EventSource fallback
   }
 
-  // Periodic fallback check every 4 seconds
-  let lastCount = loadConversations().length;
-  pollInterval = setInterval(async () => {
-    try {
-      const status = await fetchBridgeStatus();
-      if (status.online && status.count !== undefined && status.count !== lastCount) {
-        lastCount = status.count;
-        const res = await syncWithDiskBridge();
-        onUpdate({
-          type: 'poll_sync',
-          count: res.count,
-          latest: res.data?.[0]
-        });
-      }
-    } catch {}
-  }, 4000);
-
   return () => {
-    if (eventSource) eventSource.close();
-    if (pollInterval) clearInterval(pollInterval);
+    if (eventSource) {
+      eventSource.close();
+    }
   };
 }
 

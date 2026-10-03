@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Conversation } from '../types';
 import { MODES } from '../modes';
 import {
@@ -38,17 +38,21 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
   const [showConfirmAll, setShowConfirmAll] = useState(false);
   const [filterSource, setFilterSource] = useState<'all' | 'desktop' | 'shell'>('all');
   const [isSyncing, setIsSyncing] = useState(false);
-
-  if (!isOpen) return null;
-
-  const shellCount = conversations.filter((c) => c.source === 'terminal_shell').length;
+  const shellCount = useMemo(
+    () => conversations.filter((c) => c.source === 'terminal_shell').length,
+    [conversations]
+  );
   const desktopCount = conversations.length - shellCount;
 
-  const filtered = conversations.filter((c) => {
-    if (filterSource === 'shell') return c.source === 'terminal_shell';
-    if (filterSource === 'desktop') return c.source !== 'terminal_shell';
-    return true;
-  });
+  const filtered = useMemo(() => {
+    return conversations.filter((c) => {
+      if (filterSource === 'shell') return c.source === 'terminal_shell';
+      if (filterSource === 'desktop') return c.source !== 'terminal_shell';
+      return true;
+    });
+  }, [conversations, filterSource]);
+
+  if (!isOpen) return null;
 
   const handleSyncDisk = async () => {
     setIsSyncing(true);

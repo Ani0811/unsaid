@@ -111,6 +111,11 @@ export function App() {
     setIsDocsOpen(false);
   }, []);
 
+  const activeConvoIdRef = useRef(activeConvoId);
+  useEffect(() => {
+    activeConvoIdRef.current = activeConvoId;
+  }, [activeConvoId]);
+
   // Initial connection test on mount & bridge sync with CLI shell
   useEffect(() => {
     let isMounted = true;
@@ -120,7 +125,7 @@ export function App() {
       }
     });
 
-    // Synchronize reflections with CLI shell (~/.unsaid/reflections.json)
+    // Synchronize reflections with CLI shell (~/.unsaid/reflections.json) once on mount
     syncWithDiskBridge().then((res) => {
       if (isMounted && res.success && res.data) {
         setConversations(loadConversations());
@@ -133,11 +138,11 @@ export function App() {
       const updated = loadConversations();
       setConversations(updated);
 
-      if (event.latest && event.latest.id !== activeConvoId) {
+      if (event.convo && event.convo.id !== activeConvoIdRef.current) {
         setBridgeToast({
-          id: event.latest.id,
-          title: event.latest.title || 'New Reflection',
-          convo: event.latest
+          id: event.convo.id,
+          title: event.convo.title || 'New Reflection',
+          convo: event.convo
         });
       }
     });
@@ -146,7 +151,7 @@ export function App() {
       isMounted = false;
       unsubscribe();
     };
-  }, [settings, activeConvoId]);
+  }, [settings]);
 
   // Deep-linking via URL query params (?convo=... or ?reflection=...)
   useEffect(() => {
