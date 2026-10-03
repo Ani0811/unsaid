@@ -299,9 +299,32 @@ async function streamReflection(mode, userText) {
     process.stdout.write(`${C.reset}\n\n`);
     await saveReflection(mode, userText, fullResponse);
   } catch {
-    console.log(`${C.rose}Could not reach local Gemma model via LM Studio.${C.reset}`);
-    console.log(`${C.dim}Tip: Start LM Studio, load Gemma, and start server on port 1234.${C.reset}`);
-    console.log(`${C.zinc}You can also view reflections or preview in Desktop App at http://localhost:5173${C.reset}\n`);
+    console.log(`${C.amber}[LM Studio Server Offline - Streaming Reflection Preview]${C.reset}`);
+    console.log(`${C.dim}Tip: When LM Studio is loaded with Gemma on port 1234, live neural weights are used.${C.reset}\n`);
+
+    let fallback = '';
+    const clean = userText.toLowerCase();
+    if (mode === 'talk') {
+      if (clean.includes('overwhelm') || clean.includes('tired') || clean.includes('exhaust')) {
+        fallback = `It sounds like things have been feeling really heavy and relentless lately.\n\nWhen everything piles up all at once, even small tasks can feel like a mountain. There's no pressure here to figure out every piece of it right now.\n\nIf you want to untangle it a little, is there one particular part that feels like it's taking up the most space in your head?`;
+      } else {
+        fallback = `Thank you for sharing that. It sounds like this has been lingering in your mind for a while.\n\nSometimes just giving a thought some room to breathe outside your own head brings a little more clarity.\n\nHow has holding this been affecting your day-to-day energy?`;
+      }
+    } else if (mode === 'unload') {
+      fallback = `I hear you. I'm holding this space for you, and you don't have to fix, explain, or apologize for any of it.\n\nIt feels like there's a lot of pent-up noise and tension that just needed a place to land. It's completely safe here to leave it.\n\nFeel free to keep dumping more if there is more left inside, or just let it sit here and take a slow breath.`;
+    } else {
+      fallback = `It takes courage to look directly at the words we keep inside.\n\nWe cannot know for sure how they would react or what they are experiencing on their end, but it's very clear what you wish was acknowledged: you wanted them to understand how much this mattered to you, without having to minimize your own feelings.\n\nIf you were to boil what you wrote down into its rawest, most honest essence, what is the single thing you wish they could hear the most?`;
+    }
+
+    process.stdout.write(`${C.white}`);
+    const words = fallback.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      process.stdout.write((i === 0 ? '' : ' ') + words[i]);
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    process.stdout.write(`${C.reset}\n\n`);
+
+    await saveReflection(mode, userText, fallback);
   }
 }
 
@@ -534,6 +557,34 @@ async function handleCliArgs() {
 
   if (cmd === 'sync') {
     await syncWithDesktop();
+    process.exit(0);
+  }
+
+  if (cmd === 'history') {
+    const items = loadHistory();
+    if (items.length === 0) {
+      console.log(`\n${C.dim}No reflections recorded yet in ~/.unsaid/reflections.json.${C.reset}\n`);
+    } else {
+      console.log(`\n${C.bold}Recent Reflections (${items.length}):${C.reset} ${C.dim}(Type 'node bin/unsaid.js open <#>' to view in Desktop App)${C.reset}`);
+      items.slice(0, 10).forEach((item, idx) => {
+        const time = new Date(item.updatedAt || item.timestamp).toLocaleString();
+        const modeColor = item.mode === 'talk' ? C.amber : item.mode === 'unload' ? C.sky : C.purple;
+        const userMsg = item.messages ? item.messages.find((m) => m.role === 'user')?.content : item.userText;
+        const aiMsg = item.messages ? item.messages.find((m) => m.role === 'assistant')?.content : item.aiText;
+
+        console.log(`  ${C.dim}${idx + 1}.${C.reset} [${modeColor}${(item.mode || 'talk').toUpperCase()}${C.reset}] ${C.dim}${time}${C.reset} ${item.source === 'terminal_shell' ? C.emerald + '· Terminal' : C.sky + '· Desktop'}${C.reset}`);
+        if (userMsg) console.log(`     ${C.white}You:${C.reset} ${userMsg.slice(0, 60)}${userMsg.length > 60 ? '...' : ''}`);
+        if (aiMsg) console.log(`     ${C.zinc}Unsaid:${C.reset} ${aiMsg.slice(0, 80).replace(/\n/g, ' ')}...\n`);
+      });
+    }
+    process.exit(0);
+  }
+
+  if (cmd === 'status') {
+    await checkConnection();
+    await checkDesktopBridge();
+    console.log(`  ${C.dim}Desktop Bridge:${C.reset} ${desktopOnline ? C.emerald + 'CONNECTED' : C.zinc + 'OFFLINE'}${C.reset} (${DESKTOP_URL})`);
+    console.log(`  ${C.dim}Storage File:${C.reset} ${C.white}${STORAGE_FILE}${C.reset}\n`);
     process.exit(0);
   }
 
