@@ -24,6 +24,7 @@ import { HistoryDrawer } from './components/HistoryDrawer';
 import { SettingsModal } from './components/SettingsModal';
 import { LockScreen } from './components/LockScreen';
 import { DocsHub } from './components/DocsHub';
+import { TerminalShell } from './components/TerminalShell';
 import { AlertCircle, X } from 'lucide-react';
 
 function createUniqueId(prefix: string): string {
@@ -65,6 +66,7 @@ export function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
+  const [isShellOpen, setIsShellOpen] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
   // App Lock state
@@ -415,7 +417,15 @@ export function App() {
         isLockConfigured={isAppLockConfigured()}
         onLockApp={() => setIsLocked(true)}
         isDocsOpen={isDocsOpen}
-        onToggleDocs={() => setIsDocsOpen(!isDocsOpen)}
+        onToggleDocs={() => {
+          setIsDocsOpen(!isDocsOpen);
+          setIsShellOpen(false);
+        }}
+        isShellOpen={isShellOpen}
+        onToggleShell={() => {
+          setIsShellOpen(!isShellOpen);
+          setIsDocsOpen(false);
+        }}
       />
 
       {/* Global Error Banner */}
@@ -441,7 +451,14 @@ export function App() {
 
       {/* Main View Area */}
       <main className="flex-1 flex flex-col">
-        {isDocsOpen ? (
+        {isShellOpen ? (
+          <TerminalShell
+            connectionInfo={connectionInfo}
+            onExitShell={() => setIsShellOpen(false)}
+            onOpenGUI={() => setIsShellOpen(false)}
+            onLockApp={() => setIsLocked(true)}
+          />
+        ) : isDocsOpen ? (
           <DocsHub
             onBackToApp={() => setIsDocsOpen(false)}
             onSelectMode={(mode) => {

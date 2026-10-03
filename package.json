@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "desktop": "start-desktop.bat"
+    "desktop": "start-desktop.bat",
+    "shell": "node bin/unsaid.js"
   },
   "dependencies": {
     "react": "^19.2.8",

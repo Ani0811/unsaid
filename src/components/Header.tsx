@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Mode, ConnectionInfo } from '../types';
 import { MODES } from '../modes';
-import { Shield, Clock, Settings as SettingsIcon, PlusCircle, Sparkles, Lock, BookOpen } from 'lucide-react';
+import { Shield, Clock, Settings as SettingsIcon, PlusCircle, Sparkles, Lock, BookOpen, Terminal } from 'lucide-react';
 import { ConnectionBadge } from './ConnectionBadge';
 import { SoundscapeControl } from './SoundscapeControl';
 
@@ -19,6 +19,8 @@ interface HeaderProps {
   onLockApp: () => void;
   isDocsOpen: boolean;
   onToggleDocs: () => void;
+  isShellOpen: boolean;
+  onToggleShell: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -34,7 +36,9 @@ export const Header: React.FC<HeaderProps> = ({
   isLockConfigured,
   onLockApp,
   isDocsOpen,
-  onToggleDocs
+  onToggleDocs,
+  isShellOpen,
+  onToggleShell
 }) => {
   return (
     <header className="sticky top-0 z-30 w-full backdrop-blur-md bg-[#0d0e12]/85 border-b border-zinc-800/80 px-4 sm:px-8 py-3 transition-colors">
@@ -66,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mode Navigation Tabs (visible when in reflection or mode selected) */}
-        {!isDocsOpen && currentMode && (
+        {!isDocsOpen && !isShellOpen && currentMode && (
           <nav className="hidden lg:flex items-center gap-1 bg-zinc-900/80 p-1 rounded-xl border border-zinc-800">
             {(Object.keys(MODES) as Mode[]).map((modeKey) => {
               const config = MODES[modeKey];
@@ -90,6 +94,20 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Shell Toggle Button */}
+          <button
+            onClick={onToggleShell}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${
+              isShellOpen
+                ? 'bg-amber-500/20 border-amber-500/40 text-amber-200 font-semibold'
+                : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-zinc-800'
+            }`}
+            title={isShellOpen ? 'Exit Terminal Shell' : 'Open Interactive Terminal Shell'}
+          >
+            <Terminal className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">{isShellOpen ? 'Exit Shell' : 'Shell'}</span>
+          </button>
+
           {/* Docs / Guide Toggle Button */}
           <button
             onClick={onToggleDocs}
@@ -129,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* New reflection button if in a conversation */}
-          {currentMode && !isDocsOpen && (
+          {currentMode && !isDocsOpen && !isShellOpen && (
             <button
               onClick={onNewReflection}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 border border-zinc-700/60 transition"
