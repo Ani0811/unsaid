@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0d0e12;
+  color: #e5e4ec;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Custom reflective serif for intimate quotes and headers */
+.font-serif-reflect {
+  font-family: 'Lora', Georgia, serif;
+}
+
+/* Subtle, smooth custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Soft ambient warmth */
+.ambient-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(212, 163, 115, 0.08) 0%, rgba(13, 14, 18, 0) 70%);
+}
+
+.ambient-warmth-talk {
+  background: radial-gradient(circle at 50% -10%, rgba(184, 146, 106, 0.1) 0%, rgba(13, 14, 18, 0) 65%);
+}
+
+.ambient-warmth-unload {
+  background: radial-gradient(circle at 50% -10%, rgba(116, 143, 166, 0.1) 0%, rgba(13, 14, 18, 0) 65%);
+}
+
+.ambient-warmth-unsaid {
+  background: radial-gradient(circle at 50% -10%, rgba(162, 126, 178, 0.12) 0%, rgba(13, 14, 18, 0) 65%);
+}
