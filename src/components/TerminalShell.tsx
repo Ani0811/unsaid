@@ -6,7 +6,8 @@ import { checkSafety } from '../safety/detector';
 import { checkPromptGuardrails } from '../safety/guardrails';
 import { maskPII } from '../safety/pii';
 import { ambientSound, type SoundscapeType } from '../audio/ambient';
-import { Terminal as TerminalIcon, Sparkles, X, ArrowUpRight } from 'lucide-react';
+import { launchExternalTerminal, syncWithDiskBridge } from '../storage/bridge';
+import { Terminal as TerminalIcon, Sparkles, X, ArrowUpRight, ExternalLink, RefreshCw } from 'lucide-react';
 
 interface TerminalShellProps {
   connectionInfo: ConnectionInfo;
@@ -109,6 +110,8 @@ export const TerminalShell: React.FC<TerminalShellProps> = ({
   unload [dump]        - Enter UNLOAD mode to dump thoughts without fixing
   unsaid [target]      - Enter UNSAID mode to explore unspoken words
   status               - Check LM Studio connection & loaded Gemma models
+  sync                 - Synchronize history with ~/.unsaid/reflections.json
+  popout / external    - Launch external native Windows Terminal CLI window
   sound [rain|hearth|drone|off] - Control ambient background soundscape
   lock                 - Lock this room with PIN screen
   gui                  - Switch back to Graphical Interface
@@ -116,6 +119,28 @@ export const TerminalShell: React.FC<TerminalShellProps> = ({
   exit                 - Return to Unsaid room`
         );
         break;
+
+      case 'sync': {
+        const res = await syncWithDiskBridge();
+        if (res.success) {
+          addLine('success', `Synced with disk bridge (~/.unsaid): ${res.count} reflections shared.`);
+        } else {
+          addLine('error', `Sync failed: ${res.error}`);
+        }
+        break;
+      }
+
+      case 'popout':
+      case 'external':
+      case 'spawn': {
+        const ok = await launchExternalTerminal();
+        if (ok) {
+          addLine('success', 'Launched external native Windows Terminal CLI window.');
+        } else {
+          addLine('error', 'Could not spawn external terminal window.');
+        }
+        break;
+      }
 
       case 'status':
         addLine(
@@ -295,6 +320,32 @@ Unsaid is an automated reflection tool, not clinical care.
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              const res = await syncWithDiskBridge();
+              if (res.success) {
+                addLine('success', `Synced ${res.count} reflections with disk bridge.`);
+              }
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-[11px] transition"
+            title="Sync reflections with ~/.unsaid/reflections.json"
+          >
+            <RefreshCw className="w-3 h-3 text-emerald-400" />
+            <span className="hidden sm:inline">Sync</span>
+          </button>
+          <button
+            onClick={async () => {
+              const ok = await launchExternalTerminal();
+              if (ok) {
+                addLine('success', 'Spawned external native Windows Terminal CLI window.');
+              }
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-amber-300 border border-amber-500/30 text-[11px] transition"
+            title="Open standalone external Windows Terminal CLI"
+          >
+            <ExternalLink className="w-3 h-3" />
+            <span>Pop Out CLI</span>
+          </button>
           <button
             onClick={onOpenGUI}
             className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-[11px] transition"

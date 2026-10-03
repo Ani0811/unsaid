@@ -3,13 +3,14 @@
 /**
  * Unsaid - Native Terminal Shell (CLI REPL)
  * A private terminal for the things you don't know how to say out loud.
- * Powered by local Gemma on LM Studio.
+ * Linked bidirectionally with the Unsaid Desktop Application.
  */
 
 import readline from 'readline';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { spawn } from 'child_process';
 
 // Terminal ANSI styling
 const C = {
@@ -23,14 +24,14 @@ const C = {
   emerald: '\x1b[38;2;52;211;153m',
   rose: '\x1b[38;2;251;113;133m',
   zinc: '\x1b[38;2;161;161;170m',
-  white: '\x1b[38;2;244;244;245m',
-  bgDark: '\x1b[48;2;18;18;24m'
+  white: '\x1b[38;2;244;244;245m'
 };
 
 const STORAGE_DIR = path.join(os.homedir(), '.unsaid');
 const STORAGE_FILE = path.join(STORAGE_DIR, 'reflections.json');
 
 const LM_STUDIO_URL = process.env.VITE_LM_STUDIO_BASE_URL || 'http://localhost:1234/v1';
+const DESKTOP_URL = 'http://localhost:5173';
 let activeModel = process.env.VITE_LM_STUDIO_MODEL || '';
 let piiMasking = false;
 let currentMode = null; // 'talk' | 'unload' | 'unsaid' | null
@@ -52,14 +53,29 @@ function loadHistory() {
 function saveReflection(mode, userText, aiText) {
   try {
     const list = loadHistory();
-    list.unshift({
-      id: 'term_' + Date.now(),
+    const now = Date.now();
+    const convo = {
+      id: 'convo_term_' + now + '_' + Math.random().toString(36).substring(2, 6),
+      title: userText.slice(0, 48) + (userText.length > 48 ? '...' : ''),
       mode,
-      userText,
-      aiText,
-      timestamp: Date.now()
-    });
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(list.slice(0, 50), null, 2));
+      messages: [
+        { id: 'msg_' + now, role: 'user', content: userText, timestamp: now },
+        { id: 'asst_' + now, role: 'assistant', content: aiText, timestamp: now }
+      ],
+      createdAt: now,
+      updatedAt: now,
+      source: 'terminal_shell'
+    };
+
+    list.unshift(convo);
+    fs.writeFileSync(STORAGE_FILE, JSON.stringify(list.slice(0, 100), null, 2));
+
+    // Optional background sync with desktop server if active
+    fetch(`${DESKTOP_URL}/api/bridge/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([convo])
+    }).catch(() => {});
   } catch {}
 }
 
@@ -86,12 +102,12 @@ function printBanner() {
   console.log(`
 ${C.amber}   _   _                 _     _ ${C.reset}
 ${C.amber}  | | | |_ __  ___  __ _(_) __| |${C.reset}    ${C.bold}${C.white}UNSAID TERMINAL SHELL${C.reset}
-${C.amber}  | | | | '_ \\/ __|/ _\` | |/ _\` |${C.reset}    ${C.dim}v1.0.0 · Local-First Reflection Shell${C.reset}
-${C.amber}  | |_| | | | \\__ \\ (_| | | (_| |${C.reset}    ${C.zinc}Powered by local Gemma on LM Studio${C.reset}
-${C.amber}   \\___/|_| |_|___/\\__,_|_|\\__,_|${C.reset}    ${C.emerald}● Zero Cloud · Private to this machine${C.reset}
+${C.amber}  | | | | '_ \\/ __|/ _\` | |/ _\` |${C.reset}    ${C.dim}Linked with Unsaid Desktop App${C.reset}
+${C.amber}  | |_| | | | \\__ \\ (_| | | (_| |${C.reset}    ${C.zinc}Local Gemma · LM Studio · Zero Cloud${C.reset}
+${C.amber}   \\___/|_| |_|___/\\__,_|_|\\__,_|${C.reset}    ${C.emerald}● Bridge: ~/.unsaid/reflections.json${C.reset}
 `);
   console.log(`${C.dim}────────────────────────────────────────────────────────────────────────────${C.reset}`);
-  console.log(`  Type ${C.bold}help${C.reset} for commands, or jump into a mode: ${C.amber}talk${C.reset}, ${C.sky}unload${C.reset}, ${C.purple}unsaid${C.reset}`);
+  console.log(`  Commands: ${C.bold}help${C.reset}, ${C.amber}talk${C.reset}, ${C.sky}unload${C.reset}, ${C.purple}unsaid${C.reset}, ${C.emerald}app${C.reset} (open desktop app), ${C.white}sync${C.reset}`);
   console.log(`${C.dim}────────────────────────────────────────────────────────────────────────────${C.reset}\n`);
 }
 
@@ -120,6 +136,41 @@ async function checkConnection() {
   console.log(`  ${C.dim}LM Studio is not reachable at ${LM_STUDIO_URL}.${C.reset}`);
   console.log(`  ${C.zinc}Start LM Studio, load your Gemma model, and start the local server on port 1234.${C.reset}`);
   return false;
+}
+
+function launchDesktopApp() {
+  console.log(`${C.emerald}Launching Desktop App window (${DESKTOP_URL})...${C.reset}`);
+  if (process.platform === 'win32') {
+    spawn('cmd.exe', ['/c', 'start', 'start-desktop.bat'], {
+      detached: true,
+      stdio: 'ignore'
+    }).unref();
+  } else {
+    spawn('open', [DESKTOP_URL], { detached: true, stdio: 'ignore' }).unref();
+  }
+}
+
+async function syncWithDesktop() {
+  process.stdout.write(`${C.zinc}Syncing with Unsaid Desktop App... ${C.reset}`);
+  try {
+    const localHistory = loadHistory();
+    const res = await fetch(`${DESKTOP_URL}/api/bridge/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(localHistory)
+    });
+    if (res.ok) {
+      const result = await res.json();
+      if (Array.isArray(result.data)) {
+        fs.writeFileSync(STORAGE_FILE, JSON.stringify(result.data, null, 2));
+      }
+      console.log(`${C.emerald}SYNCED (${result.count || localHistory.length} reflections shared)${C.reset}`);
+      return;
+    }
+  } catch {}
+
+  console.log(`${C.amber}SAVED LOCALLY${C.reset}`);
+  console.log(`  ${C.dim}Desktop server is offline. Reflections stored in ~/.unsaid/reflections.json${C.reset}`);
 }
 
 async function streamReflection(mode, userText) {
@@ -255,12 +306,25 @@ ${C.bold}Commands:${C.reset}
   ${C.amber}talk${C.reset} [thought]       Enter conversational TALK mode or say a thought
   ${C.sky}unload${C.reset} [dump]        Enter UNLOAD mode to dump thoughts without fixing
   ${C.purple}unsaid${C.reset} [words]       Enter UNSAID mode to explore words meant for someone
+  ${C.emerald}app / desktop${C.reset}       Launch the Unsaid standalone Desktop App window
+  ${C.emerald}sync${C.reset}                Bidirectionally synchronize with Desktop App
   ${C.white}status${C.reset}               Check LM Studio & Gemma connection
   ${C.white}history${C.reset}              View recent local reflections
   ${C.white}mask [on|off]${C.reset}        Toggle client-side PII scrubbing (${piiMasking ? C.emerald + 'ON' : C.zinc + 'OFF'}${C.reset})
   ${C.white}clear${C.reset}                Clear terminal screen
   ${C.white}exit / quit${C.reset}          Exit Unsaid shell
 `);
+        break;
+
+      case 'app':
+      case 'desktop':
+      case 'gui':
+        launchDesktopApp();
+        break;
+
+      case 'sync':
+        await syncWithDesktop();
+        console.log('');
         break;
 
       case 'status':
@@ -301,15 +365,18 @@ ${C.bold}Commands:${C.reset}
       case 'history': {
         const items = loadHistory();
         if (items.length === 0) {
-          console.log(`\n${C.dim}No terminal reflections recorded yet.${C.reset}\n`);
+          console.log(`\n${C.dim}No reflections recorded yet in ~/.unsaid/reflections.json.${C.reset}\n`);
         } else {
           console.log(`\n${C.bold}Recent Reflections (${items.length}):${C.reset}`);
           items.slice(0, 10).forEach((item, idx) => {
-            const time = new Date(item.timestamp).toLocaleString();
+            const time = new Date(item.updatedAt || item.timestamp).toLocaleString();
             const modeColor = item.mode === 'talk' ? C.amber : item.mode === 'unload' ? C.sky : C.purple;
-            console.log(`  ${C.dim}${idx + 1}.${C.reset} [${modeColor}${item.mode.toUpperCase()}${C.reset}] ${C.dim}${time}${C.reset}`);
-            console.log(`     ${C.white}You:${C.reset} ${item.userText.slice(0, 60)}${item.userText.length > 60 ? '...' : ''}`);
-            console.log(`     ${C.zinc}Unsaid:${C.reset} ${item.aiText.slice(0, 80).replace(/\n/g, ' ')}...\n`);
+            const userMsg = item.messages ? item.messages.find(m => m.role === 'user')?.content : item.userText;
+            const aiMsg = item.messages ? item.messages.find(m => m.role === 'assistant')?.content : item.aiText;
+
+            console.log(`  ${C.dim}${idx + 1}.${C.reset} [${modeColor}${(item.mode || 'talk').toUpperCase()}${C.reset}] ${C.dim}${time}${C.reset} ${item.source === 'terminal_shell' ? C.emerald + '· Terminal' : C.sky + '· Desktop'}${C.reset}`);
+            if (userMsg) console.log(`     ${C.white}You:${C.reset} ${userMsg.slice(0, 60)}${userMsg.length > 60 ? '...' : ''}`);
+            if (aiMsg) console.log(`     ${C.zinc}Unsaid:${C.reset} ${aiMsg.slice(0, 80).replace(/\n/g, ' ')}...\n`);
           });
         }
         break;

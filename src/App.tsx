@@ -25,6 +25,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { LockScreen } from './components/LockScreen';
 import { DocsHub } from './components/DocsHub';
 import { TerminalShell } from './components/TerminalShell';
+import { syncWithDiskBridge } from './storage/bridge';
 import { AlertCircle, X } from 'lucide-react';
 
 function createUniqueId(prefix: string): string {
@@ -98,7 +99,7 @@ export function App() {
     [settings]
   );
 
-  // Initial connection test on mount
+  // Initial connection test on mount & bridge sync with CLI shell
   useEffect(() => {
     let isMounted = true;
     testLMStudioConnection(settings).then((info) => {
@@ -106,6 +107,14 @@ export function App() {
         setConnectionInfo(info);
       }
     });
+
+    // Synchronize reflections with CLI shell (~/.unsaid/reflections.json)
+    syncWithDiskBridge().then((res) => {
+      if (isMounted && res.success && res.data) {
+        setConversations(loadConversations());
+      }
+    });
+
     return () => {
       isMounted = false;
     };
