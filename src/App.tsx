@@ -23,6 +23,7 @@ import { ChatInterface } from './components/ChatInterface';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { SettingsModal } from './components/SettingsModal';
 import { LockScreen } from './components/LockScreen';
+import { DocsHub } from './components/DocsHub';
 import { AlertCircle, X } from 'lucide-react';
 
 function createUniqueId(prefix: string): string {
@@ -63,6 +64,7 @@ export function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDocsOpen, setIsDocsOpen] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
   // App Lock state
@@ -412,6 +414,8 @@ export function App() {
         onTestConnection={() => runConnectionCheck()}
         isLockConfigured={isAppLockConfigured()}
         onLockApp={() => setIsLocked(true)}
+        isDocsOpen={isDocsOpen}
+        onToggleDocs={() => setIsDocsOpen(!isDocsOpen)}
       />
 
       {/* Global Error Banner */}
@@ -437,7 +441,15 @@ export function App() {
 
       {/* Main View Area */}
       <main className="flex-1 flex flex-col">
-        {!currentMode ? (
+        {isDocsOpen ? (
+          <DocsHub
+            onBackToApp={() => setIsDocsOpen(false)}
+            onSelectMode={(mode) => {
+              setIsDocsOpen(false);
+              handleSelectMode(mode);
+            }}
+          />
+        ) : !currentMode ? (
           <Landing
             onSelectMode={handleSelectMode}
             onOpenConversation={handleOpenConversation}
@@ -446,6 +458,7 @@ export function App() {
             isTestingConnection={isTestingConnection}
             onTestConnection={() => runConnectionCheck()}
             onOpenSettings={() => setIsSettingsOpen(true)}
+            onOpenDocs={() => setIsDocsOpen(true)}
           />
         ) : (
           <ChatInterface

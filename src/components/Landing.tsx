@@ -2,7 +2,7 @@ import React from 'react';
 import type { Mode, ConnectionInfo, Conversation } from '../types';
 import { MODES } from '../modes';
 import { ConnectionBadge } from './ConnectionBadge';
-import { ShieldCheck, MessageSquare, Feather, Sparkles, ArrowRight, Clock, HelpCircle } from 'lucide-react';
+import { ShieldCheck, MessageSquare, Feather, Sparkles, ArrowRight, Clock, HelpCircle, BookOpen } from 'lucide-react';
 
 interface LandingProps {
   onSelectMode: (mode: Mode, initialStarter?: string) => void;
@@ -12,6 +12,7 @@ interface LandingProps {
   isTestingConnection: boolean;
   onTestConnection: () => void;
   onOpenSettings: () => void;
+  onOpenDocs?: () => void;
 }
 
 export const Landing: React.FC<LandingProps> = ({
@@ -21,7 +22,8 @@ export const Landing: React.FC<LandingProps> = ({
   connectionInfo,
   isTestingConnection,
   onTestConnection,
-  onOpenSettings
+  onOpenSettings,
+  onOpenDocs
 }) => {
   return (
     <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-16 space-y-12">
@@ -210,6 +212,28 @@ export const Landing: React.FC<LandingProps> = ({
           </div>
         </section>
       )}
+
+      {/* Documentation Portal Card */}
+      <section className="rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-950/20 via-[#14151e] to-purple-950/20 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-zinc-200 font-semibold text-sm">
+            <BookOpen className="w-4 h-4 text-amber-400" />
+            <span>Interactive Documentation & Architecture Guide</span>
+          </div>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Explore step-by-step LM Studio guides, Gemma model selection, the Three Modes breakdown, and local security specifications.
+          </p>
+        </div>
+        {onOpenDocs && (
+          <button
+            onClick={onOpenDocs}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium text-zinc-950 bg-zinc-100 hover:bg-white transition shrink-0 shadow-xs"
+          >
+            <span>Read Documentation</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </section>
 
       {/* Positioning & Clarity Notice */}
       <section className="rounded-2xl border border-zinc-800/70 bg-[#121318]/60 p-5 text-xs text-zinc-400 space-y-2">
