@@ -3,10 +3,15 @@
 > **“A private place for the things you don't know how to say out loud.”**  
 > *Built for the Hacktoberfest 2026 DEV Weekend Challenge: “Build for a Friend.”*
 
-[![Local-First](https://img.shields.io/badge/Privacy-100%25%20Local--First-emerald.svg)](#why-local-ai)
+🌐 **Live Web Application:** [https://ani0811.github.io/unsaid/](https://ani0811.github.io/unsaid/)  
+📖 **Online Documentation Hub:** [https://ani0811.github.io/unsaid/website/index.html](https://ani0811.github.io/unsaid/website/index.html)
+
+[![Live App](https://img.shields.io/badge/Live%20App-ani0811.github.io%2Funsaid-success.svg?style=flat-square&logo=github)](https://ani0811.github.io/unsaid/)
+[![Documentation](https://img.shields.io/badge/Docs-Website%20Hub-sky.svg?style=flat-square)](https://ani0811.github.io/unsaid/website/index.html)
+[![Local-First](https://img.shields.io/badge/Privacy-100%25%20Local--First-emerald.svg)](#why-local-first-ai)
 [![LM Studio](https://img.shields.io/badge/AI%20Engine-LM%20Studio%20(Gemma%203%204B)-amber.svg)](https://lmstudio.ai)
 [![Voice Companion](https://img.shields.io/badge/Voice-Handy%20(Offline%20Whisper)-sky.svg)](https://github.com/cjpais/Handy)
-[![Stack](https://img.shields.io/badge/Stack-React%2019%20%7C%20TypeScript%20%7C%20Vite%20%7C%20Node.js-purple.svg)](#architecture)
+[![Stack](https://img.shields.io/badge/Stack-React%2019%20%7C%20TypeScript%20%7C%20Vite%20%7C%20Node.js-purple.svg)](#architecture-overview)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -16,17 +21,29 @@
 ---
 
 ## Table of Contents
-1. [What is Unsaid?](#what-is-unsaid)
-2. [Why Local-First AI?](#why-local-first-ai)
-3. [Architecture Overview](#architecture-overview)
-4. [The Three Reflection Frameworks](#the-three-reflection-frameworks)
-5. [Voice Agents & Offline Dictation (Handy)](#voice-agents--offline-dictation-handy)
-6. [Unsaid Terminal Shell (CLI)](#unsaid-terminal-shell-cli)
-7. [Desktop App & Responsive Experience](#desktop-app--responsive-experience)
-8. [Safety, Guardrails & Privacy Engine](#safety-guardrails--privacy-engine)
-9. [Documentation Website (`website/`)](#documentation-website-website)
-10. [Quick Start & Setup Guide](#quick-start--setup-guide)
-11. [Important Boundaries & Non-Goals](#important-boundaries--non-goals)
+1. [Live App & Online Demo](#live-app--online-demo)
+2. [What is Unsaid?](#what-is-unsaid)
+3. [Why Local-First AI?](#why-local-first-ai)
+4. [Architecture Overview](#architecture-overview)
+5. [The Three Reflection Frameworks](#the-three-reflection-frameworks)
+6. [Voice Agents & Offline Dictation (Handy)](#voice-agents--offline-dictation-handy)
+7. [Unsaid Terminal Shell (CLI)](#unsaid-terminal-shell-cli)
+8. [Desktop App & Responsive Experience](#desktop-app--responsive-experience)
+9. [Safety, Guardrails & Privacy Engine](#safety-guardrails--privacy-engine)
+10. [Documentation Website (`website/`)](#documentation-website-website)
+11. [Quick Start & Setup Guide](#quick-start--setup-guide)
+12. [Important Boundaries & Non-Goals](#important-boundaries--non-goals)
+
+---
+
+## Live App & Online Demo
+
+You can try Unsaid directly in your browser without any installation:
+
+* 🌐 **Live Web Application:** [https://ani0811.github.io/unsaid/](https://ani0811.github.io/unsaid/)
+* 📖 **Documentation Site:** [https://ani0811.github.io/unsaid/website/index.html](https://ani0811.github.io/unsaid/website/index.html)
+
+*(Note: The live web app includes a built-in Offline Preview Simulator in Settings so anyone can explore all three reflection frameworks and the complete UI flow immediately with zero setup!)*
 
 ---
 
@@ -199,10 +216,12 @@ Because reflections can touch on sensitive topics, Unsaid includes five client-s
 
 ## Documentation Website (`website/`)
 
-The repository includes a standalone documentation website in the `/website` directory:
+The repository includes a dedicated documentation website in the `/website` directory, hosted live at:  
+👉 **[https://ani0811.github.io/unsaid/website/index.html](https://ani0811.github.io/unsaid/website/index.html)**
+
 * **Interactive Guide:** Step-by-step instructions for setting up LM Studio, choosing Gemma models, and configuring Handy.
 * **Prompt Engineering Reference:** Complete transparency into the system prompts and emotional guardrails powering each reflection mode.
-* **Offline Access:** Open `website/index.html` in any browser or click **Docs & Guides** inside the desktop app.
+* **Offline Access:** Open `website/index.html` locally in any browser or click **Docs & Guides** inside the desktop app.
 
 ---
 
@@ -219,7 +238,7 @@ The repository includes a standalone documentation website in the `/website` dir
 ### Step 1: Clone & Install
 
 ```bash
-git clone https://github.com/your-username/unsaid.git
+git clone https://github.com/Ani0811/unsaid.git
 cd unsaid
 npm install
 ```
@@ -238,19 +257,22 @@ npm install
 
 ### Step 3: Run Unsaid
 
-**Option A: Dedicated Desktop Window (Windows)**
+**Option A: Instant Live Web App (Zero Setup)**  
+Visit **[https://ani0811.github.io/unsaid/](https://ani0811.github.io/unsaid/)** in your browser. *(Includes a built-in offline preview simulator so you can test all reflection frameworks immediately without installing anything).*
+
+**Option B: Dedicated Desktop Window (Windows)**
 ```bash
 # Double click start-desktop.bat or run:
 npm run desktop
 ```
 
-**Option B: Web Browser**
+**Option C: Local Dev Server**
 ```bash
 npm run dev
 # Open http://localhost:5173
 ```
 
-**Option C: Terminal Shell (CLI)**
+**Option D: Terminal Shell (CLI)**
 ```bash
 npm run shell
 ```
