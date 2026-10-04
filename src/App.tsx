@@ -18,9 +18,10 @@ import { checkPromptGuardrails } from './safety/guardrails';
 import { maskPII } from './safety/pii';
 import { isAppLockConfigured, getAutoLockMinutes } from './safety/appLock';
 import { Header } from './components/Header';
-import { Landing } from './components/Landing';
+import { DesktopSidebar } from './components/DesktopSidebar';
+import { DesktopDashboard } from './components/DesktopDashboard';
+import { DesktopStatusBar } from './components/DesktopStatusBar';
 import { ChatInterface } from './components/ChatInterface';
-import { HistoryDrawer } from './components/HistoryDrawer';
 import { SettingsModal } from './components/SettingsModal';
 import { LockScreen } from './components/LockScreen';
 import { DocsHub } from './components/DocsHub';
@@ -64,8 +65,8 @@ export function App() {
     return found ? found.messages : [];
   });
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
   const [isShellOpen, setIsShellOpen] = useState(false);
@@ -111,10 +112,43 @@ export function App() {
     setIsDocsOpen(false);
   }, []);
 
+  // Return to desktop dashboard / new reflection
+  const handleNewReflection = useCallback(() => {
+    clearActiveConversationId();
+    setActiveConvoId(null);
+    setCurrentMode(null);
+    setMessages([]);
+    setIsShellOpen(false);
+    setIsDocsOpen(false);
+    setConversations(loadConversations());
+  }, []);
+
   const activeConvoIdRef = useRef(activeConvoId);
   useEffect(() => {
     activeConvoIdRef.current = activeConvoId;
   }, [activeConvoId]);
+
+  // Global Keyboard Shortcuts (Ctrl+N, Ctrl+B, Ctrl+K)
+  useEffect(() => {
+    const handleGlobalShortcuts = (e: KeyboardEvent) => {
+      const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+
+      // Ctrl + N: New reflection
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        handleNewReflection();
+      }
+
+      // Ctrl + B: Toggle sidebar
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsSidebarOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalShortcuts);
+    return () => window.removeEventListener('keydown', handleGlobalShortcuts);
+  }, [handleNewReflection]);
 
   // Initial connection test on mount & bridge sync with CLI shell
   useEffect(() => {
@@ -125,7 +159,7 @@ export function App() {
       }
     });
 
-    // Synchronize reflections with CLI shell (~/.unsaid/reflections.json) once on mount
+    // Synchronize reflections with CLI shell (~/.unsaid/reflections.json)
     syncWithDiskBridge().then((res) => {
       if (isMounted && res.success && res.data) {
         setConversations(loadConversations());
@@ -215,15 +249,6 @@ export function App() {
     }
   };
 
-  // Return to landing screen
-  const handleNewReflection = () => {
-    clearActiveConversationId();
-    setActiveConvoId(null);
-    setCurrentMode(null);
-    setMessages([]);
-    setConversations(loadConversations());
-  };
-
   // Send message
   const handleSendMessage = async (rawText: string, overrideConvo?: Conversation) => {
     const convoId = overrideConvo?.id || activeConvoId;
@@ -245,7 +270,6 @@ export function App() {
     };
 
     if (!safety.isSafe) {
-      // Immediate safety response: halt regular generation
       const safetyResponse: Message = {
         id: 'safety_' + Date.now(),
         role: 'assistant',
@@ -259,25 +283,28 @@ export function App() {
 
       const targetConvo: Conversation = {
         id: convoId,
-        title: messages.length === 0 ? text.slice(0, 40) + '...' : overrideConvo?.title || 'Reflection',
-        mode,
+        title: messages.length === 0 ? text.slice(0, 48) : overrideConvo?.title || 'Reflection',
+        mode: mode,
         messages: updated,
         createdAt: overrideConvo?.createdAt || Date.now(),
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
+        source: 'desktop_app'
       };
+
       saveConversation(targetConvo);
       setConversations(loadConversations());
       return;
     }
 
-    // 2. Prompt injection & clinical boundary guardrail check
+    // 2. Clinical diagnosis / medical advice / boundary guardrails check
     const guardrail = checkPromptGuardrails(text);
-    if (!guardrail.passed) {
+    if (!guardrail.passed && guardrail.calmResponse) {
       const guardrailResponse: Message = {
-        id: 'guard_' + Date.now(),
+        id: 'guardrail_' + Date.now(),
         role: 'assistant',
-        content: guardrail.calmResponse || 'Unsaid operates strictly as a personal reflection space.',
-        timestamp: Date.now()
+        content: guardrail.calmResponse,
+        timestamp: Date.now(),
+        safetyFlag: true
       };
 
       const updated = [...messages, userMessage, guardrailResponse];
@@ -285,132 +312,137 @@ export function App() {
 
       const targetConvo: Conversation = {
         id: convoId,
-        title: messages.length === 0 ? text.slice(0, 40) + '...' : overrideConvo?.title || 'Reflection',
-        mode,
+        title: messages.length === 0 ? text.slice(0, 48) : overrideConvo?.title || 'Reflection',
+        mode: mode,
         messages: updated,
         createdAt: overrideConvo?.createdAt || Date.now(),
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
+        source: 'desktop_app'
       };
+
       saveConversation(targetConvo);
       setConversations(loadConversations());
       return;
     }
 
-    // Normal safe flow
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-
-    // Save user message immediately
-    const firstTitle = messages.length === 0 ? text.slice(0, 45) + '...' : overrideConvo?.title || 'Reflection';
-    const interimConvo: Conversation = {
-      id: convoId,
-      title: firstTitle,
-      mode,
-      messages: updatedMessages,
-      createdAt: overrideConvo?.createdAt || Date.now(),
-      updatedAt: Date.now(),
-      source: 'desktop_app'
-    };
-    saveConversation(interimConvo);
-    setConversations(loadConversations());
-
+    // Add user message to UI immediately
+    const messagesWithUser = [...messages, userMessage];
+    setMessages(messagesWithUser);
     setIsGenerating(true);
     setGlobalError(null);
 
-    // Streaming placeholder assistant message
-    const assistantMsgId = 'asst_' + Date.now();
-    let accumulatedContent = '';
+    // Placeholder assistant message for streaming
+    const assistantMessageId = 'msg_' + (Date.now() + 1);
+    const initialAssistantMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now()
+    };
+
+    let currentStreamedText = '';
 
     try {
       await generateReflection(
         mode,
-        updatedMessages,
+        messagesWithUser,
         settings,
-        (chunk) => {
-          accumulatedContent = chunk;
-          setMessages([...updatedMessages, {
-            id: assistantMsgId,
-            role: 'assistant',
-            content: accumulatedContent,
-            timestamp: Date.now()
-          }]);
+        (token) => {
+          currentStreamedText += token;
+          setMessages([...messagesWithUser, { ...initialAssistantMessage, content: currentStreamedText }]);
         }
       );
 
-      const finalMessages: Message[] = [
-        ...updatedMessages,
-        {
-          id: assistantMsgId,
-          role: 'assistant',
-          content: accumulatedContent,
-          timestamp: Date.now()
-        }
-      ];
-
+      // Final save after stream finishes
+      const finalAssistantMessage: Message = {
+        ...initialAssistantMessage,
+        content: currentStreamedText
+      };
+      const finalMessages = [...messagesWithUser, finalAssistantMessage];
       setMessages(finalMessages);
 
-      const finalConvo: Conversation = {
+      const targetConvo: Conversation = {
         id: convoId,
-        title: firstTitle,
-        mode,
+        title:
+          messages.length === 0
+            ? text.slice(0, 48) + (text.length > 48 ? '...' : '')
+            : overrideConvo?.title || 'Reflection',
+        mode: mode,
         messages: finalMessages,
         createdAt: overrideConvo?.createdAt || Date.now(),
         updatedAt: Date.now(),
         source: 'desktop_app'
       };
-      saveConversation(finalConvo);
+
+      saveConversation(targetConvo);
       setConversations(loadConversations());
-      syncWithDiskBridge();
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      setGlobalError(errMsg);
-      // Revert to messages before empty failed response
-      setMessages(updatedMessages);
+      console.error('Error during AI generation:', err);
+      const errorMessage =
+        err instanceof Error ? err.message : 'Could not communicate with local LM Studio.';
+
+      setGlobalError(
+        `${errorMessage} Ensure LM Studio is running and local server is started on http://localhost:1234.`
+      );
+
+      const errorAssistantMessage: Message = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: `*Unsaid could not reach your local LM Studio engine.* \n\n${errorMessage}\n\nYou can continue writing freely in Journal Mode or check your LM Studio server settings.`,
+        timestamp: Date.now()
+      };
+
+      const finalMessages = [...messagesWithUser, errorAssistantMessage];
+      setMessages(finalMessages);
+
+      const targetConvo: Conversation = {
+        id: convoId,
+        title: overrideConvo?.title || text.slice(0, 48),
+        mode: mode,
+        messages: finalMessages,
+        createdAt: overrideConvo?.createdAt || Date.now(),
+        updatedAt: Date.now(),
+        source: 'desktop_app'
+      };
+
+      saveConversation(targetConvo);
+      setConversations(loadConversations());
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // Clear messages in active reflection
+  // Clear messages within current reflection
   const handleClearMessages = () => {
-    if (!activeConvoId || !currentMode) return;
-    const clearedConvo: Conversation = {
-      id: activeConvoId,
-      title: `Cleared ${MODES[currentMode].name} Reflection`,
-      mode: currentMode,
-      messages: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
+    if (!activeConvoId) return;
     setMessages([]);
-    saveConversation(clearedConvo);
-    setConversations(loadConversations());
-  };
-
-  // Switch mode of active reflection
-  const handleSwitchMode = (newMode: Mode) => {
-    if (!activeConvoId) {
-      handleSelectMode(newMode);
-      return;
-    }
-    setCurrentMode(newMode);
-    const existing = conversations.find((c) => c.id === activeConvoId);
-    if (existing) {
-      const updated: Conversation = {
-        ...existing,
-        mode: newMode,
-        updatedAt: Date.now()
-      };
+    const found = conversations.find((c) => c.id === activeConvoId);
+    if (found) {
+      const updated: Conversation = { ...found, messages: [], updatedAt: Date.now() };
       saveConversation(updated);
       setConversations(loadConversations());
     }
   };
 
-  // Delete single conversation
+  // Switch mode mid-conversation
+  const handleSwitchMode = (newMode: Mode) => {
+    setCurrentMode(newMode);
+    if (activeConvoId) {
+      const found = conversations.find((c) => c.id === activeConvoId);
+      if (found) {
+        const updated: Conversation = { ...found, mode: newMode, updatedAt: Date.now() };
+        saveConversation(updated);
+        setConversations(loadConversations());
+      }
+    }
+  };
+
+  // Delete a reflection
   const handleDeleteConversation = (id: string) => {
     deleteConversation(id);
     const updated = loadConversations();
     setConversations(updated);
+
     if (activeConvoId === id) {
       handleNewReflection();
     }
@@ -420,51 +452,34 @@ export function App() {
   const handleDeleteAllData = () => {
     deleteAllData();
     setConversations([]);
-    setActiveConvoId(null);
-    setCurrentMode(null);
-    setMessages([]);
-    setSettings(loadSettings());
-    runConnectionCheck();
+    handleNewReflection();
   };
 
-  // Save Settings from modal
+  // Save updated settings
   const handleSaveSettings = (newSettings: Settings) => {
     setSettings(newSettings);
     saveSettings(newSettings);
     runConnectionCheck(newSettings);
   };
 
-  // Refresh data from backup import
-  const handleRefreshData = () => {
-    setConversations(loadConversations());
-    setSettings(loadSettings());
-    const activeId = getActiveConversationId();
-    if (activeId) {
-      const found = loadConversations().find((c) => c.id === activeId);
-      if (found) {
-        setMessages(found.messages);
-      }
-    }
-  };
+  // Active title for breadcrumb
+  const activeConvo = conversations.find((c) => c.id === activeConvoId);
 
-  // Ambient glow selector
-  const ambientClass = currentMode
-    ? MODES[currentMode]?.glowClass || 'ambient-glow'
-    : 'ambient-glow';
-
-  // If App Lock is active
+  // App is locked behind PIN
   if (isLocked) {
     return <LockScreen onUnlock={() => setIsLocked(false)} />;
   }
 
   return (
-    <div className={`min-h-screen flex flex-col bg-[#0d0e12] text-[#e2e1e8] transition-all duration-700 ${ambientClass}`}>
-      {/* Top Header */}
+    <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#0b0c10] text-zinc-100 font-sans select-none">
+      {/* Native Desktop Titlebar / Header */}
       <Header
         currentMode={currentMode}
+        activeTitle={activeConvo?.title}
         onSelectMode={handleSwitchMode}
         onNewReflection={handleNewReflection}
-        onOpenHistory={() => setIsHistoryOpen(true)}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         historyCount={conversations.length}
         connectionInfo={connectionInfo}
@@ -487,8 +502,8 @@ export function App() {
 
       {/* Global Error Banner */}
       {globalError && (
-        <div className="max-w-4xl mx-auto w-full px-4 pt-4">
-          <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-xs text-amber-200 flex items-start justify-between gap-3 shadow-sm">
+        <div className="max-w-4xl mx-auto w-full px-4 pt-3 shrink-0">
+          <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-xs text-amber-200 flex items-start justify-between gap-3 shadow-md">
             <div className="flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
@@ -506,51 +521,82 @@ export function App() {
         </div>
       )}
 
-      {/* Main View Area */}
-      <main className="flex-1 flex flex-col">
-        {isShellOpen ? (
-          <TerminalShell
-            connectionInfo={connectionInfo}
-            onExitShell={() => setIsShellOpen(false)}
-            onOpenGUI={() => setIsShellOpen(false)}
-            onLockApp={() => setIsLocked(true)}
-          />
-        ) : isDocsOpen ? (
-          <DocsHub
-            onBackToApp={() => setIsDocsOpen(false)}
-            onSelectMode={(mode) => {
-              setIsDocsOpen(false);
-              handleSelectMode(mode);
-            }}
-          />
-        ) : !currentMode ? (
-          <Landing
-            onSelectMode={handleSelectMode}
-            onOpenConversation={handleOpenConversation}
-            recentConversations={conversations}
-            connectionInfo={connectionInfo}
-            isTestingConnection={isTestingConnection}
-            onTestConnection={() => runConnectionCheck()}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-            onOpenDocs={() => setIsDocsOpen(true)}
-          />
-        ) : (
-          <ChatInterface
-            mode={currentMode}
-            messages={messages}
-            isGenerating={isGenerating}
-            onSendMessage={(content) => handleSendMessage(content)}
-            onClearMessages={handleClearMessages}
-            onSwitchMode={handleSwitchMode}
-            connectionInfo={connectionInfo}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-          />
-        )}
-      </main>
+      {/* Desktop Main Workspace Split View */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Native Desktop Sidebar */}
+        <DesktopSidebar
+          isOpen={isSidebarOpen}
+          onToggle={() => setIsSidebarOpen(false)}
+          conversations={conversations}
+          activeId={activeConvoId}
+          onSelectConversation={handleOpenConversation}
+          onNewReflection={handleNewReflection}
+          onSelectMode={handleSelectMode}
+          onDeleteConversation={handleDeleteConversation}
+          connectionInfo={connectionInfo}
+          isTestingConnection={isTestingConnection}
+          onTestConnection={() => runConnectionCheck()}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onLockApp={() => setIsLocked(true)}
+          isLockConfigured={isAppLockConfigured()}
+          onOpenDocs={() => setIsDocsOpen(true)}
+          onToggleShell={() => setIsShellOpen((prev) => !prev)}
+        />
+
+        {/* Center Main Canvas */}
+        <main className="flex-1 flex flex-col overflow-hidden relative bg-[#0d0e14]">
+          {isShellOpen ? (
+            <TerminalShell
+              connectionInfo={connectionInfo}
+              onExitShell={() => setIsShellOpen(false)}
+              onOpenGUI={() => setIsShellOpen(false)}
+              onLockApp={() => setIsLocked(true)}
+            />
+          ) : isDocsOpen ? (
+            <DocsHub
+              onBackToApp={() => setIsDocsOpen(false)}
+              onSelectMode={(mode) => {
+                setIsDocsOpen(false);
+                handleSelectMode(mode);
+              }}
+            />
+          ) : !currentMode ? (
+            <DesktopDashboard
+              onSelectMode={handleSelectMode}
+              onOpenConversation={handleOpenConversation}
+              recentConversations={conversations}
+              connectionInfo={connectionInfo}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenDocs={() => setIsDocsOpen(true)}
+              onToggleShell={() => setIsShellOpen(true)}
+            />
+          ) : (
+            <ChatInterface
+              mode={currentMode}
+              messages={messages}
+              isGenerating={isGenerating}
+              onSendMessage={(content) => handleSendMessage(content)}
+              onClearMessages={handleClearMessages}
+              onSwitchMode={handleSwitchMode}
+              connectionInfo={connectionInfo}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+            />
+          )}
+        </main>
+      </div>
+
+      {/* Desktop Bottom Status Bar */}
+      <DesktopStatusBar
+        connectionInfo={connectionInfo}
+        reflectionsCount={conversations.length}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        activeMode={currentMode}
+      />
 
       {/* Real-time Bridge Notification Toast */}
       {bridgeToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 p-3.5 rounded-2xl bg-[#14151f] border border-amber-500/40 shadow-2xl animate-in slide-in-from-bottom-5 duration-200 max-w-sm">
+        <div className="fixed bottom-10 right-6 z-50 flex items-center gap-3 p-3.5 rounded-2xl bg-[#14151f] border border-amber-500/40 shadow-2xl animate-in slide-in-from-bottom-5 duration-200 max-w-sm">
           <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <Terminal className="w-4 h-4" />
           </div>
@@ -580,18 +626,6 @@ export function App() {
         </div>
       )}
 
-      {/* History Drawer */}
-      <HistoryDrawer
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        conversations={conversations}
-        activeId={activeConvoId}
-        onSelectConversation={handleOpenConversation}
-        onDeleteConversation={handleDeleteConversation}
-        onDeleteAllData={handleDeleteAllData}
-        onRefreshConversations={() => setConversations(loadConversations())}
-      />
-
       {/* Settings & Privacy Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -602,7 +636,7 @@ export function App() {
         isTestingConnection={isTestingConnection}
         onTestConnection={() => runConnectionCheck()}
         onDeleteAllData={handleDeleteAllData}
-        onRefreshData={handleRefreshData}
+        onRefreshData={() => setConversations(loadConversations())}
       />
     </div>
   );

@@ -84,9 +84,21 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
           </button>
         </form>
 
-        <p className="text-[11px] text-zinc-500">
-          PIN is stored as a SHA-256 hash strictly inside your local browser.
-        </p>
+        <div className="pt-2 flex flex-col items-center gap-2">
+          <p className="text-[11px] text-zinc-500">
+            PIN is stored as a SHA-256 hash strictly inside your local browser.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.removeItem('unsaid_pin_hash_v1');
+              onUnlock();
+            }}
+            className="text-[10px] text-zinc-500 hover:text-amber-400/90 underline transition"
+          >
+            Forgot PIN? Reset local lock
+          </button>
+        </div>
       </div>
     </div>
   );

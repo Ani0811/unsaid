@@ -181,6 +181,12 @@ function unsaidBridgePlugin() {
           }
         }
 
+        // Redirect /docs and /website to /website/index.html
+        if (req.url === '/docs' || req.url === '/docs/' || req.url === '/website' || req.url === '/website/') {
+          res.writeHead(302, { Location: '/website/index.html' })
+          return res.end()
+        }
+
         next()
       })
     }

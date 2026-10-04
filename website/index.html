@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unsaid Documentation — Local-First AI Reflection & Conversation Space</title>
+  <meta name="description" content="Official documentation for Unsaid: A local-first AI reflection workspace powered by open Gemma models in LM Studio. Built for Hacktoberfest 2026.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Fixed Header -->
+  <header class="docs-header">
+    <div class="brand">
+      <div class="brand-logo">🌿</div>
+      <div class="brand-text">Unsaid</div>
+      <span class="brand-badge">v1.0.0 Docs</span>
+    </div>
+
+    <div class="header-actions">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="docsSearch" class="search-input" placeholder="Search documentation (e.g. Gemma, CLI, Modes)..." autocomplete="off">
+      </div>
+      <a href="http://localhost:5173" target="_blank" class="header-btn primary" title="Launch the Desktop Web App">
+        <span>🖥 Open App</span>
+      </a>
+      <a href="https://github.com/basutkar/unsaid" target="_blank" class="header-btn" title="View Source on GitHub">
+        <span>⭐ GitHub</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <!-- Left Navigation Sidebar -->
+    <aside class="docs-sidebar">
+      <div class="sidebar-group">
+        <div class="sidebar-title">Getting Started</div>
+        <ul class="sidebar-nav">
+          <li><a href="#overview" class="sidebar-link active"><span class="icon">📖</span> Overview</a></li>
+          <li><a href="#quickstart" class="sidebar-link"><span class="icon">⚡</span> Quickstart</a></li>
+          <li><a href="#architecture" class="sidebar-link"><span class="icon">🏛️</span> Architecture</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-title">Core Modes</div>
+        <ul class="sidebar-nav">
+          <li><a href="#modes" class="sidebar-link"><span class="icon">💭</span> Reflection Modes</a></li>
+          <li><a href="#letter-studio" class="sidebar-link"><span class="icon">✉️</span> Letter Studio</a></li>
+          <li><a href="#soundscapes" class="sidebar-link"><span class="icon">🎧</span> Ambient Audio</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-title">Local AI & Terminal</div>
+        <ul class="sidebar-nav">
+          <li><a href="#lm-studio" class="sidebar-link"><span class="icon">🧠</span> LM Studio & Gemma</a></li>
+          <li><a href="#cli-shell" class="sidebar-link"><span class="icon">⌨️</span> Unsaid CLI Shell</a></li>
+          <li><a href="#bridge" class="sidebar-link"><span class="icon">🔄</span> Desktop-CLI Bridge</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-title">Safety & Privacy</div>
+        <ul class="sidebar-nav">
+          <li><a href="#guardrails" class="sidebar-link"><span class="icon">🛡️</span> Security & Guardrails</a></li>
+          <li><a href="#crisis-helplines" class="sidebar-link"><span class="icon">🆘</span> Crisis Helplines</a></li>
+          <li><a href="#privacy" class="sidebar-link"><span class="icon">🔒</span> Zero-Cloud Privacy</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-title">Reference</div>
+        <ul class="sidebar-nav">
+          <li><a href="#shortcuts" class="sidebar-link"><span class="icon">⌨️</span> Shortcuts & Commands</a></li>
+          <li><a href="#troubleshooting" class="sidebar-link"><span class="icon">🔧</span> Troubleshooting</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="docs-content">
+      <!-- Hero Banner -->
+      <section class="hero-banner">
+        <span class="hero-tag">Hacktoberfest 2026 Weekend Challenge • "Build for a Friend"</span>
+        <h1 class="hero-title">A private place for the things <span>you don't know how to say out loud</span>.</h1>
+        <p class="hero-subtitle">
+          Unsaid is an intentional, local-first reflection application for when you need to talk through something, unload racing thoughts without premature solutions, or practice saying what matters before facing another human.
+        </p>
+        <div class="hero-buttons">
+          <a href="#quickstart" class="header-btn primary">Get Started in 2 Minutes</a>
+          <a href="#lm-studio" class="header-btn">Setup Local Gemma AI</a>
+          <a href="#cli-shell" class="header-btn">&gt;_ CLI Shell Guide</a>
+        </div>
+      </section>
+
+      <!-- Section: Overview -->
+      <section id="overview" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">📖 Project Overview</h2>
+          <p class="section-lead">Why Unsaid exists, who it is built for, and how it differs fundamentally from cloud chatbots.</p>
+        </div>
+
+        <p>
+          We all have moments where our thoughts are tangled, emotionally heavy, or too sensitive to share with friends, colleagues, or social media. Most modern AI tools immediately attempt to optimize, diagnose, solve, or extract telemetry to the cloud.
+        </p>
+        <p style="margin-top: 1rem;">
+          <strong>Unsaid takes a completely different path:</strong>
+        </p>
+
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon amber">🌱</div>
+            <h3 class="card-title">Local-First & Private</h3>
+            <p class="card-desc">No accounts, no trackers, no servers. All inference runs locally via LM Studio using open Google Gemma weights. Your innermost thoughts never leave your hardware.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon sky">🧘</div>
+            <h3 class="card-title">Non-Clinical & Calming</h3>
+            <p class="card-desc">Unsaid is not an AI therapist or medical diagnostic tool. It acts as an empathetic sounding board that listens deeply, asks clarifying questions, and respects your pace.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon purple">⚡</div>
+            <h3 class="card-title">Dual Interfaces</h3>
+            <p class="card-desc">Use the distraction-free desktop application or drop directly into the fast hacker-friendly interactive terminal CLI shell (<code>unsaid shell</code>).</p>
+          </div>
+          <div class="card">
+            <div class="card-icon emerald">🔄</div>
+            <h3 class="card-title">Seamless Disk Bridge</h3>
+            <p class="card-desc">Reflections created in the terminal CLI automatically synchronize in real-time with the desktop app via <code>~/.unsaid/reflections.json</code>.</p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="callout-title">⚠️ Non-Clinical Positioning Notice</div>
+          <p>
+            Unsaid is designed exclusively for self-reflection, journaling, and conversational rehearsal. It is <strong>not</strong> a substitute for professional mental health diagnosis, clinical psychotherapy, or emergency care.
+          </p>
+        </div>
+      </section>
+
+      <!-- Section: Quickstart -->
+      <section id="quickstart" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">⚡ Quickstart Guide</h2>
+          <p class="section-lead">Clone, install dependencies, and launch both the desktop workspace and CLI shell.</p>
+        </div>
+
+        <h3 style="margin: 1.5rem 0 0.5rem;">1. Prerequisites</h3>
+        <ul style="margin-left: 1.5rem; color: var(--text-secondary); line-height: 1.8;">
+          <li><strong>Node.js:</strong> v18.0.0 or higher (<a href="https://nodejs.org" target="_blank" style="color: var(--accent-amber); text-decoration: underline;">nodejs.org</a>)</li>
+          <li><strong>LM Studio:</strong> v0.3.0 or higher (<a href="https://lmstudio.ai" target="_blank" style="color: var(--accent-amber); text-decoration: underline;">lmstudio.ai</a>)</li>
+          <li><strong>Model:</strong> Gemma 2 2B Instruct or Gemma 2 9B Instruct (GGUF format)</li>
+        </ul>
+
+        <h3 style="margin: 1.5rem 0 0.5rem;">2. Installation & Launch</h3>
+        <div class="code-container">
+          <div class="code-header">
+            <span>Terminal (macOS, Linux, Windows PowerShell)</span>
+            <button class="copy-btn">Copy</button>
+          </div>
+          <pre><code># 1. Clone the repository
+git clone https://github.com/basutkar/unsaid.git
+cd unsaid
+
+# 2. Install dependencies
+npm install
+
+# 3. Launch the desktop application
+npm run dev
+# OR for the standalone window:
+npm run desktop
+
+# 4. Launch the interactive CLI shell in another terminal tab:
+npm run shell</code></pre>
+        </div>
+      </section>
+
+      <!-- Section: Architecture -->
+      <section id="architecture" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">🏛️ Architecture & Data Flow</h2>
+          <p class="section-lead">How the desktop frontend, CLI shell, local bridge, and LM Studio communicate.</p>
+        </div>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span>System Data Flow</span>
+            <button class="copy-btn">Copy</button>
+          </div>
+          <pre><code>┌────────────────────────────────┐         ┌───────────────────────────────┐
+│     Unsaid Desktop App         │         │      Unsaid CLI Shell         │
+│  (React 19 + TypeScript + Vite)│         │     (Node.js Interactive)     │
+└───────────────┬────────────────┘         └───────────────┬───────────────┘
+                │                                          │
+                │  GET/POST /api/reflections               │ Direct Read/Write
+                ▼                                          ▼
+     ┌─────────────────────────────────────────────────────────────┐
+     │           Local File Bridge: ~/.unsaid/reflections.json     │
+     │            (Automatic Conflict-Free Bidirectional Sync)      │
+     └─────────────────────────────────────────────────────────────┘
+                                    ▲
+                                    │ Local HTTP Requests
+                                    ▼
+     ┌─────────────────────────────────────────────────────────────┐
+     │             LM Studio Local Inference Server                │
+     │         http://localhost:1234/v1/chat/completions           │
+     │            (Google Gemma 2 2B/9B Instruct GGUF)             │
+     └─────────────────────────────────────────────────────────────┘</code></pre>
+        </div>
+
+        <p style="margin-top: 1rem; color: var(--text-secondary);">
+          Unlike cloud-based chat apps with complex backend servers and user databases, Unsaid writes directly to your local file system at <code>~/.unsaid/reflections.json</code>. The Vite development server provides a lightweight internal bridge proxy for the browser environment, allowing edits in either the CLI or Desktop to mirror instantly.
+        </p>
+      </section>
+
+      <!-- Section: Modes -->
+      <section id="modes" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">💭 The Three Reflection Modes</h2>
+          <p class="section-lead">Tailored conversational frameworks depending on your current emotional state.</p>
+        </div>
+
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon amber">💬</div>
+            <h3 class="card-title">1. Talk Through It</h3>
+            <p class="card-desc">
+              A collaborative, empathetic dialogue. Gemma gently probes underlying emotions, helps reframe unhelpful assumptions, and provides constructive reflections without being pushy or robotic.
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-icon sky">🌊</div>
+            <h3 class="card-title">2. Just Unload</h3>
+            <p class="card-desc">
+              When you don't want advice or solutions. Dump your thoughts in continuous streams. The AI acts as a quiet witness, offering silent presence or brief, validating grounding thoughts only when requested.
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-icon purple">🎭</div>
+            <h3 class="card-title">3. The Unsaid (Roleplay)</h3>
+            <p class="card-desc">
+              Rehearse difficult conversations before you have them in real life. Specify who you need to speak to (partner, manager, parent) and their personality, then roleplay the exchange to discover clarity.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Letter Studio -->
+      <section id="letter-studio" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">✉️ Letter Studio</h2>
+          <p class="section-lead">Write letters you may never send — release emotional weight safely.</p>
+        </div>
+
+        <p>
+          Some thoughts are best articulated in long-form prose addressed to someone specific. The Letter Studio provides a focused parchment writing canvas with therapeutic rituals:
+        </p>
+
+        <ul style="margin: 1rem 0 1rem 1.5rem; color: var(--text-secondary); line-height: 1.8;">
+          <li><strong>Burn Ritual:</strong> A therapeutic animation that permanently shreds the text from memory and disk, symbolizing release.</li>
+          <li><strong>Vault:</strong> Store encrypted reflections locally behind your optional 4-digit PIN lock.</li>
+          <li><strong>Gemma Mirror:</strong> Ask Gemma to read your draft and reflect back what emotion seems to be hiding beneath the words.</li>
+        </ul>
+      </section>
+
+      <!-- Section: Soundscapes -->
+      <section id="soundscapes" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">🎧 Ambient Soundscapes</h2>
+          <p class="section-lead">Procedural, zero-bandwidth Web Audio background soundscapes.</p>
+        </div>
+
+        <p>
+          To create an immersive, calming space without loading external audio assets, Unsaid incorporates a native Web Audio API synthesizer that generates procedural acoustics:
+        </p>
+        <ul style="margin: 1rem 0 1rem 1.5rem; color: var(--text-secondary); line-height: 1.8;">
+          <li>🌧️ <strong>Gentle Rain:</strong> Pink noise filtered through dual bandpass resonant nodes simulating raindrop strikes.</li>
+          <li>🔥 <strong>Cozy Fireplace:</strong> Low-frequency brown noise mixed with random pop and crackle impulse triggers.</li>
+          <li>🌊 <strong>Soft Stream:</strong> Smooth high-shelf filtered modulation for focused writing and unburdening.</li>
+        </ul>
+      </section>
+
+      <!-- Section: LM Studio -->
+      <section id="lm-studio" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">🧠 LM Studio & Gemma Setup</h2>
+          <p class="section-lead">Configure the local AI engine in under three minutes.</p>
+        </div>
+
+        <p>
+          Unsaid is engineered to communicate with any OpenAI-compatible local server, but is specially tuned with system prompts for Google's open <strong>Gemma 2</strong> models:
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span>LM Studio Setup Instructions</span>
+            <button class="copy-btn">Copy</button>
+          </div>
+          <pre><code>1. Download LM Studio from https://lmstudio.ai (Windows, macOS, Linux).
+2. Open the Search tab in LM Studio and search for: "gemma-2-2b-it" or "gemma-2-9b-it".
+3. Download a Q4_K_M or Q5_K_M GGUF quantization.
+4. Go to the "Local Server" tab (the &lt;-&gt; icon on the left).
+5. Select your loaded Gemma model at the top.
+6. Click "Start Server". By default, it runs on http://localhost:1234.
+7. Unsaid will immediately detect the server and show a green "Online" indicator!</code></pre>
+        </div>
+
+        <div class="callout info">
+          <div class="callout-title">💡 Offline Mode Fallback</div>
+          <p>
+            If LM Studio is not running, Unsaid continues to work smoothly in <strong>Offline / Journal Mode</strong>. You can freely write, unload thoughts, search past sessions, and compose letters without AI inference.
+          </p>
+        </div>
+      </section>
+
+      <!-- Section: CLI Shell -->
+      <section id="cli-shell" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">⌨️ Unsaid CLI Shell</h2>
+          <p class="section-lead">Full-featured terminal REPL for keyboard-centric reflection.</p>
+        </div>
+
+        <p>
+          For developers and terminal lovers, <code>unsaid</code> includes an interactive terminal shell that provides all the power of the desktop app inside your favorite terminal:
+        </p>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span>Terminal Launch</span>
+            <button class="copy-btn">Copy</button>
+          </div>
+          <pre><code># Start the interactive shell
+npm run shell
+
+# Or if linked globally:
+unsaid</code></pre>
+        </div>
+
+        <h3 style="margin: 1.5rem 0 0.75rem;">Interactive Shell Commands</h3>
+        <table class="docs-table">
+          <thead>
+            <tr>
+              <th>Command</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>talk</code></td>
+              <td>Start a guided "Talk Through It" conversational session with Gemma</td>
+            </tr>
+            <tr>
+              <td><code>unload</code></td>
+              <td>Open a free-form stream-of-consciousness thought unburdening buffer</td>
+            </tr>
+            <tr>
+              <td><code>unsaid</code></td>
+              <td>Roleplay a difficult conversation with an AI partner persona</td>
+            </tr>
+            <tr>
+              <td><code>history</code></td>
+              <td>List all past reflections with dates, tags, and origin badges</td>
+            </tr>
+            <tr>
+              <td><code>open &lt;#&gt;</code></td>
+              <td>Read and continue a previous reflection session right in your terminal</td>
+            </tr>
+            <tr>
+              <td><code>app</code></td>
+              <td>Launch or bring the Unsaid Desktop Application to the foreground</td>
+            </tr>
+            <tr>
+              <td><code>stats</code></td>
+              <td>Display total reflections count, streak, and word counts</td>
+            </tr>
+            <tr>
+              <td><code>clear</code> / <code>exit</code></td>
+              <td>Clear terminal screen or exit the interactive shell session</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Section: Bridge -->
+      <section id="bridge" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">🔄 Desktop-CLI Realtime Bridge</h2>
+          <p class="section-lead">Two interfaces, one single source of truth.</p>
+        </div>
+
+        <p>
+          Unsaid uses an ultra-low latency file-based bridge stored at <code>~/.unsaid/reflections.json</code>.
+          When you write in the CLI shell:
+        </p>
+        <ol style="margin: 1rem 0 1rem 1.5rem; color: var(--text-secondary); line-height: 1.8;">
+          <li>Your messages and Gemma's streaming tokens write atomically to disk.</li>
+          <li>The Desktop App checks the lightweight file timestamp or receives live updates through the internal API endpoint.</li>
+          <li>New reflections appear automatically with a <code>&gt;_ Shell</code> origin tag in the sidebar.</li>
+        </ol>
+      </section>
+
+      <!-- Section: Security & Guardrails -->
+      <section id="guardrails" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">🛡️ Security Guardrails & Crisis Protocol</h2>
+          <p class="section-lead">Responsible AI guardrails embedded directly into the application layer.</p>
+        </div>
+
+        <p>
+          Unsaid actively monitors user input against a comprehensive, compassionate safety evaluation matrix before sending tokens to the local model:
+        </p>
+
+        <div class="callout crisis">
+          <div class="callout-title">🚨 Immediate Safety Interventions</div>
+          <p>
+            If a user indicates self-harm, severe crisis, or suicidal ideation, Unsaid immediately halts standard generative responses and displays an emergency crisis card with direct helpline contact information.
+          </p>
+        </div>
+
+        <h3 style="margin: 1.5rem 0 0.75rem;">Guardrail Rules:</h3>
+        <ul style="margin-left: 1.5rem; color: var(--text-secondary); line-height: 1.8;">
+          <li><strong>No Medical / Diagnostic Claims:</strong> The model is constrained to never label symptoms with DSM-5 psychiatric diagnoses.</li>
+          <li><strong>No Medication Advice:</strong> Unsaid refuses to discuss dosages or prescribe pharmaceuticals.</li>
+          <li><strong>Compassionate De-escalation:</strong> Responses focus on grounding, breathing exercises, and encouraging real-world human support.</li>
+        </ul>
+      </section>
+
+      <!-- Section: Helplines -->
+      <section id="crisis-helplines" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">🆘 24/7 Crisis Helplines</h2>
+          <p class="section-lead">Free, confidential support available anytime you need human support.</p>
+        </div>
+
+        <table class="docs-table">
+          <thead>
+            <tr>
+              <th>Country / Region</th>
+              <th>Helpline Service</th>
+              <th>Contact Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>United States & Canada</td>
+              <td>Suicide & Crisis Lifeline</td>
+              <td><strong>Call or text 988</strong> (24/7, Free & Confidential)</td>
+            </tr>
+            <tr>
+              <td>United Kingdom</td>
+              <td>Samaritans / NHS 111</td>
+              <td><strong>Call 116 123</strong> or call <strong>111</strong></td>
+            </tr>
+            <tr>
+              <td>Australia</td>
+              <td>Lifeline Australia</td>
+              <td><strong>Call 13 11 14</strong></td>
+            </tr>
+            <tr>
+              <td>International</td>
+              <td>Befrienders Worldwide</td>
+              <td><a href="https://www.befrienders.org" target="_blank" style="color: var(--accent-sky); text-decoration: underline;">befrienders.org</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Section: Privacy -->
+      <section id="privacy" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">🔒 Privacy Guarantee</h2>
+          <p class="section-lead">Why "Local First" is the only ethical foundation for personal reflection.</p>
+        </div>
+
+        <p>
+          Cloud AI providers log prompts, train on chat transcripts, and are vulnerable to data breaches. With Unsaid:
+        </p>
+        <ul style="margin: 1rem 0 1rem 1.5rem; color: var(--text-secondary); line-height: 1.8;">
+          <li>Your messages stay strictly in local memory and in <code>~/.unsaid/reflections.json</code>.</li>
+          <li>Network calls only route to <code>http://localhost:1234</code>. Disconnecting your Wi-Fi changes nothing.</li>
+          <li>You can set an optional 4-digit PIN lock to prevent shoulder-surfing on shared computers.</li>
+        </ul>
+      </section>
+
+      <!-- Section: Shortcuts -->
+      <section id="shortcuts" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">⌨️ Keyboard Shortcuts Reference</h2>
+          <p class="section-lead">Fly through Unsaid without reaching for your mouse.</p>
+        </div>
+
+        <table class="docs-table">
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Ctrl</kbd> + <kbd>N</kbd> / <kbd>Cmd</kbd> + <kbd>N</kbd></td>
+              <td>Start a new reflection session</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd> + <kbd>B</kbd> / <kbd>Cmd</kbd> + <kbd>B</kbd></td>
+              <td>Toggle reflection history sidebar</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd> + <kbd>K</kbd> / <kbd>Cmd</kbd> + <kbd>K</kbd></td>
+              <td>Focus reflection search & filter bar</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td>
+              <td>Send reflection message to Gemma</td>
+            </tr>
+            <tr>
+              <td><kbd>Esc</kbd></td>
+              <td>Close active modal or blur input</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Section: Troubleshooting -->
+      <section id="troubleshooting" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">🔧 Troubleshooting</h2>
+          <p class="section-lead">Quick resolutions for common local development situations.</p>
+        </div>
+
+        <h4 style="margin: 1rem 0 0.5rem; color: var(--accent-amber);">Q: The indicator shows "Local Model Offline"</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+          Make sure LM Studio is open, your model is selected, and you have clicked <strong>Start Server</strong> on port <code>1234</code>. Verify in your browser by visiting <code>http://localhost:1234/v1/models</code>.
+        </p>
+
+        <h4 style="margin: 1.5rem 0 0.5rem; color: var(--accent-amber);">Q: Reflections created in the CLI don't show in the App</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+          Ensure you are running the desktop app with <code>npm run dev</code> or <code>npm run desktop</code> so that the Vite local bridge endpoint is active. The app checks every 3 seconds for updates.
+        </p>
+      </section>
+
+      <!-- Footer -->
+      <footer class="docs-footer">
+        <div>Unsaid &bull; Built with care for Hacktoberfest 2026 "Build for a Friend"</div>
+        <div>Local-first &bull; Google Gemma 2 &bull; 100% Private</div>
+      </footer>
+    </main>
+  </div>
+
+  <script src="docs.js"></script>
+</body>
+</html>

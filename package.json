@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "desktop": "start-desktop.bat",
-    "shell": "node bin/unsaid.js"
+    "shell": "node bin/unsaid.js",
+    "website": "start website\\index.html"
   },
   "dependencies": {
     "react": "^19.2.8",
