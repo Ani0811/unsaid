@@ -161,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden md:inline">{isDocsOpen ? 'Room' : 'Docs'}</span>
           </button>
           <a
-            href="/website/index.html"
+            href="./website/index.html"
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition"

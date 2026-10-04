@@ -189,7 +189,7 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
             </button>
           ) : (
             <a
-              href="/website/index.html"
+              href="./website/index.html"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-300 font-medium transition"
@@ -627,7 +627,7 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
             </p>
           </div>
           <a
-            href="/website/index.html"
+            href="./website/index.html"
             target="_blank"
             rel="noopener noreferrer"
             className="w-fit flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700/80 transition"
