@@ -81,8 +81,8 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onNewReflection}
           className="flex items-center gap-2 text-left group transition focus:outline-none shrink-0"
         >
-          <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-amber-600/30 via-purple-600/30 to-sky-600/30 border border-zinc-700/60 flex items-center justify-center shadow-inner group-hover:border-zinc-500 transition">
-            <span className="text-xs">🌿</span>
+          <div className="w-6 h-6 rounded-md bg-zinc-900 border border-zinc-700/80 flex items-center justify-center shadow-inner group-hover:border-amber-500/50 transition overflow-hidden">
+            <img src="./favicon.svg" alt="Unsaid logo" className="w-full h-full object-cover" />
           </div>
           <span className="font-serif-reflect text-sm font-semibold tracking-wide text-zinc-200 group-hover:text-amber-200 transition">
             Unsaid
