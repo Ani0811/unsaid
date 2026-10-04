@@ -17,8 +17,11 @@ import {
   FileText,
   Mic,
   MicOff,
-  Radio
+  Radio,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
+import { voiceAgent, type VoiceAgentState } from '../audio/voiceAgent';
 
 interface ChatInterfaceProps {
   mode: Mode;
@@ -46,11 +49,28 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isLetterStudioOpen, setIsLetterStudioOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [voiceState, setVoiceState] = useState<VoiceAgentState>({
+    isSpeaking: false,
+    isPaused: false,
+    currentText: null,
+    activeId: null
+  });
   const recognizerRef = useRef<InAppSpeechRecognizer | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const modeConfig = MODES[mode];
+
+  // Voice agent subscription
+  useEffect(() => {
+    const unsub = voiceAgent.subscribe((state) => {
+      setVoiceState(state);
+    });
+    return () => {
+      unsub();
+      voiceAgent.stop();
+    };
+  }, []);
 
   // Auto-scroll to bottom on new message
   useEffect(() => {
@@ -341,18 +361,57 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     {message.content}
                   </div>
 
-                  {/* Copy message button */}
-                  <button
-                    onClick={() => handleCopy(message.id, message.content)}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded-md bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition"
-                    title="Copy text"
-                  >
-                    {copiedId === message.id ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
+                  {/* Action buttons: Listen + Copy */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                    {!isUser && voiceAgent.isSupported() && (
+                      <button
+                        onClick={() => voiceAgent.speak(message.id, message.content)}
+                        className={`p-1 rounded-md transition ${
+                          voiceState.isSpeaking && voiceState.activeId === message.id
+                            ? 'bg-amber-500/20 text-amber-300 !opacity-100 ring-1 ring-amber-500/40'
+                            : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+                        }`}
+                        title={
+                          voiceState.isSpeaking && voiceState.activeId === message.id
+                            ? 'Stop reading'
+                            : 'Voice Agent: Read reflection aloud'
+                        }
+                      >
+                        {voiceState.isSpeaking && voiceState.activeId === message.id ? (
+                          <VolumeX className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                        ) : (
+                          <Volume2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
                     )}
-                  </button>
+                    <button
+                      onClick={() => handleCopy(message.id, message.content)}
+                      className="p-1 rounded-md bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition"
+                      title="Copy text"
+                    >
+                      {copiedId === message.id ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Active Voice Agent Speaking Banner */}
+                  {!isUser && voiceState.isSpeaking && voiceState.activeId === message.id && (
+                    <div className="mt-3 pt-2.5 border-t border-zinc-800/80 flex items-center justify-between text-xs text-amber-400/90 bg-amber-500/5 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
+                      <div className="flex items-center gap-2">
+                        <Volume2 className="w-3.5 h-3.5 animate-pulse text-amber-400" />
+                        <span className="font-mono text-[11px]">Voice Agent reading in calm cadence...</span>
+                      </div>
+                      <button
+                        onClick={() => voiceAgent.stop()}
+                        className="text-[11px] font-medium text-amber-300 hover:text-amber-200 underline ml-2"
+                      >
+                        Stop
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {isUser && (

@@ -12,8 +12,11 @@ import {
   Settings,
   Mic,
   MicOff,
-  Radio
+  Radio,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
+import { voiceAgent, type VoiceAgentState } from '../audio/voiceAgent';
 
 interface DesktopDashboardProps {
   onSelectMode: (mode: Mode, initialStarter?: string) => void;
@@ -37,7 +40,24 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
   const [scratchText, setScratchText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [handyInstalled, setHandyInstalled] = useState(true);
+  const [voiceState, setVoiceState] = useState<VoiceAgentState>({
+    isSpeaking: false,
+    isPaused: false,
+    currentText: null,
+    activeId: null
+  });
   const recognizerRef = useRef<InAppSpeechRecognizer | null>(null);
+
+  // Subscribe to Voice Agent TTS
+  useEffect(() => {
+    const unsub = voiceAgent.subscribe((state) => {
+      setVoiceState(state);
+    });
+    return () => {
+      unsub();
+      voiceAgent.stop();
+    };
+  }, []);
 
   // Check Handy local bridge status
   useEffect(() => {
@@ -384,31 +404,65 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {recentItems.map((convo) => (
-              <div
-                key={convo.id}
-                onClick={() => onOpenConversation(convo)}
-                className="group cursor-pointer p-3.5 rounded-xl bg-[#111218] hover:bg-[#151620] border border-zinc-800/80 hover:border-zinc-700 transition space-y-2"
-              >
-                <div className="flex items-center justify-between text-xs text-zinc-400">
-                  <span className="font-mono text-[10px] uppercase text-amber-400/80">
-                    {convo.mode}
-                  </span>
-                  <span className="text-[10px] text-zinc-500">
-                    {convo.messages.length} messages
-                  </span>
-                </div>
+            {recentItems.map((convo) => {
+              const lastAiMessage = [...convo.messages].reverse().find(
+                (m) => m.role === 'assistant'
+              );
+              const isSpeakingThis =
+                voiceState.isSpeaking && voiceState.activeId === convo.id;
 
-                <p className="text-xs font-medium text-zinc-200 truncate group-hover:text-amber-200 transition">
-                  {convo.title || 'Untitled Reflection'}
-                </p>
+              return (
+                <div
+                  key={convo.id}
+                  onClick={() => onOpenConversation(convo)}
+                  className={`group cursor-pointer p-3.5 rounded-xl bg-[#111218] hover:bg-[#151620] border transition space-y-2 ${
+                    isSpeakingThis
+                      ? 'border-amber-500/50 ring-1 ring-amber-500/20'
+                      : 'border-zinc-800/80 hover:border-zinc-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span className="font-mono text-[10px] uppercase text-amber-400/80">
+                      {convo.mode}
+                    </span>
+                    <span className="text-[10px] text-zinc-500">
+                      {convo.messages.length} messages
+                    </span>
+                  </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-800/50 text-[10px] text-zinc-500">
-                  <span>{new Date(convo.updatedAt || convo.createdAt).toLocaleDateString()}</span>
-                  <span className="group-hover:text-zinc-300 transition">Resume &rarr;</span>
+                  <p className="text-xs font-medium text-zinc-200 truncate group-hover:text-amber-200 transition">
+                    {convo.title || 'Untitled Reflection'}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-800/50 text-[10px] text-zinc-500">
+                    <span>{new Date(convo.updatedAt || convo.createdAt).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-2">
+                      {lastAiMessage && voiceAgent.isSupported() && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            voiceAgent.speak(convo.id, lastAiMessage.content);
+                          }}
+                          className={`p-1 rounded transition ${
+                            isSpeakingThis
+                              ? 'text-amber-400 bg-amber-500/20'
+                              : 'text-zinc-500 hover:text-amber-300'
+                          }`}
+                          title={isSpeakingThis ? 'Stop voice reading' : 'Voice Agent: Read reflection aloud'}
+                        >
+                          {isSpeakingThis ? (
+                            <VolumeX className="w-3 h-3 animate-pulse" />
+                          ) : (
+                            <Volume2 className="w-3 h-3" />
+                          )}
+                        </button>
+                      )}
+                      <span className="group-hover:text-zinc-300 transition">Resume &rarr;</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -420,10 +474,10 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-200">
               <Radio className="w-4 h-4 text-amber-400" />
-              <span>Handy Voice Dictation</span>
+              <span>Voice Agent & Handy Dictation</span>
             </div>
             <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Offline speech-to-text with local Whisper. Press <kbd className="px-1 bg-black/40 rounded text-amber-200">Ctrl+Space</kbd> anywhere.
+              Whisper speech-to-text with <kbd className="px-1 bg-black/40 rounded text-amber-200">Ctrl+Space</kbd> via Handy, plus soothing TTS voice agent playback.
             </p>
           </div>
           {handyInstalled && (
