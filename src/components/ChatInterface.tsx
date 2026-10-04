@@ -60,6 +60,21 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const modeConfig = MODES[mode];
+  const [handyActive, setHandyActive] = useState(false);
+
+  // Check if Handy is installed and actively running
+  useEffect(() => {
+    fetch('/api/handy/status')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.installed && d.running) {
+          setHandyActive(true);
+        } else {
+          setHandyActive(false);
+        }
+      })
+      .catch(() => setHandyActive(false));
+  }, []);
 
   // Voice agent subscription
   useEffect(() => {
@@ -467,14 +482,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/80" />
               <span className="hidden sm:inline">Stored only in your browser</span>
 
-              {/* Handy Voice Badge */}
-              <div
-                className="hidden md:flex items-center gap-1 text-[10px] font-mono text-amber-300/90 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20"
-                title="Handy local Whisper: Press Ctrl+Space anytime in Windows to dictate"
-              >
-                <Radio className="w-2.5 h-2.5 text-amber-400" />
-                <span>Handy: <kbd className="text-amber-200">Ctrl+Space</kbd></span>
-              </div>
+              {/* Handy Voice Badge: Only render if Handy is installed and actively running */}
+              {handyActive && (
+                <div
+                  className="hidden md:flex items-center gap-1 text-[10px] font-mono text-emerald-300/90 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20"
+                  title="Handy active: Press Ctrl+Space anytime in Windows to dictate"
+                >
+                  <Radio className="w-2.5 h-2.5 text-emerald-400" />
+                  <span>Handy: <kbd className="text-emerald-200">Ctrl+Space</kbd></span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2">

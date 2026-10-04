@@ -185,14 +185,29 @@ function unsaidBridgePlugin() {
         const handyExePath = path.join(os.homedir(), 'AppData', 'Local', 'Handy', 'handy.exe')
         const handyConfigPath = path.join(os.homedir(), 'AppData', 'Roaming', 'com.pais.handy', 'settings_store.json')
 
+        function isHandyRunning(): boolean {
+          try {
+            const out = execSync('tasklist /FI "IMAGENAME eq handy.exe" /NH', {
+              encoding: 'utf-8',
+              stdio: ['ignore', 'pipe', 'ignore'],
+              timeout: 1200
+            })
+            return out.toLowerCase().includes('handy.exe')
+          } catch {
+            return false
+          }
+        }
+
         if (req.url === '/api/handy/status' && req.method === 'GET') {
           const installed = fs.existsSync(handyExePath)
-          let selectedModel = ''
+          const running = installed ? isHandyRunning() : false
+          let selectedModel: string | null = null
           let postProcessConnected = false
-          if (fs.existsSync(handyConfigPath)) {
+
+          if (installed && fs.existsSync(handyConfigPath)) {
             try {
               const cfg = JSON.parse(fs.readFileSync(handyConfigPath, 'utf-8'))
-              selectedModel = cfg?.settings?.selected_model || ''
+              selectedModel = cfg?.settings?.selected_model || null
               postProcessConnected = cfg?.settings?.post_process_models?.custom === 'google/gemma-3-4b'
             } catch {}
           }
@@ -200,9 +215,10 @@ function unsaidBridgePlugin() {
           return res.end(
             JSON.stringify({
               installed,
-              path: handyExePath,
+              running,
+              path: installed ? handyExePath : null,
               hotkey: 'Ctrl+Space',
-              selectedModel: selectedModel || 'Default Whisper (Local Vulkan / GGML)',
+              selectedModel,
               postProcessConnected
             })
           )
@@ -211,14 +227,15 @@ function unsaidBridgePlugin() {
         // Handy Models list & status
         if (req.url === '/api/handy/models' && req.method === 'GET') {
           const installed = fs.existsSync(handyExePath)
-          let selectedModel = ''
+          const running = installed ? isHandyRunning() : false
+          let selectedModel: string | null = null
           let postProcessConnected = false
           let postProcessEnabled = false
 
-          if (fs.existsSync(handyConfigPath)) {
+          if (installed && fs.existsSync(handyConfigPath)) {
             try {
               const cfg = JSON.parse(fs.readFileSync(handyConfigPath, 'utf-8'))
-              selectedModel = cfg?.settings?.selected_model || ''
+              selectedModel = cfg?.settings?.selected_model || null
               postProcessConnected = cfg?.settings?.post_process_models?.custom === 'google/gemma-3-4b'
               postProcessEnabled = !!cfg?.settings?.post_process_enabled
             } catch {}
@@ -286,6 +303,7 @@ function unsaidBridgePlugin() {
           return res.end(
             JSON.stringify({
               installed,
+              running,
               selectedModel,
               postProcessConnected,
               postProcessEnabled,

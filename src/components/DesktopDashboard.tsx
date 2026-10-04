@@ -39,7 +39,8 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
 }) => {
   const [scratchText, setScratchText] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [handyInstalled, setHandyInstalled] = useState(true);
+  const [handyInstalled, setHandyInstalled] = useState(false);
+  const [handyRunning, setHandyRunning] = useState(false);
   const [voiceState, setVoiceState] = useState<VoiceAgentState>({
     isSpeaking: false,
     isPaused: false,
@@ -69,6 +70,7 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
       .then((d) => {
         if (d) {
           if (typeof d.installed === 'boolean') setHandyInstalled(d.installed);
+          if (typeof d.running === 'boolean') setHandyRunning(d.running);
           if (d.postProcessConnected) setHandyPostProcess(true);
           if (d.selectedModel) {
             const match = d.recommendedModels?.find((m: any) => m.id === d.selectedModel);
@@ -76,7 +78,10 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setHandyInstalled(false);
+        setHandyRunning(false);
+      });
   }, []);
 
   // Initialize Speech Recognizer
@@ -215,14 +220,26 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
               Quick Reflection Composer
             </span>
 
-            {/* Handy Offline Voice Badge */}
-            <div
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-300"
-              title="Handy offline Whisper: Press Ctrl+Space anywhere in Windows to dictate"
-            >
-              <Radio className="w-3 h-3 text-amber-400" />
-              <span>Handy: <kbd className="px-1 bg-black/40 rounded text-amber-200">Ctrl+Space</kbd></span>
-            </div>
+            {/* Handy Voice Badge (Dynamic: only if installed) */}
+            {handyInstalled && handyRunning ? (
+              <div
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-300"
+                title="Handy active: Press Ctrl+Space anywhere in Windows to dictate"
+              >
+                <Radio className="w-3 h-3 text-emerald-400" />
+                <span>Handy Active: <kbd className="px-1 bg-black/40 rounded text-emerald-200">Ctrl+Space</kbd></span>
+              </div>
+            ) : handyInstalled && !handyRunning ? (
+              <button
+                type="button"
+                onClick={launchHandy}
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-[10px] font-mono text-amber-300 transition"
+                title="Handy is installed. Click to launch Handy in background."
+              >
+                <Radio className="w-3 h-3 text-amber-400" />
+                <span>Launch Handy</span>
+              </button>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2">
@@ -264,7 +281,11 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
           onChange={(e) => setScratchText(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={4}
-          placeholder="What's on your mind right now? Start typing, press Ctrl+Space for Handy, or click Voice Dictate above..."
+          placeholder={
+            handyInstalled && handyRunning
+              ? "What's on your mind right now? Start typing, press Ctrl+Space for Handy, or click Voice Dictate above..."
+              : "What's on your mind right now? Start typing, or click Voice Dictate above to speak your thoughts..."
+          }
           className="w-full bg-[#0a0b0f] border border-zinc-800/90 rounded-xl p-4 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500/50 transition resize-none leading-relaxed"
         />
 
@@ -483,40 +504,94 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-200">
                 <Radio className="w-4 h-4 text-amber-400" />
-                <span>Voice Model (Handy)</span>
+                <span>Voice Companion (Handy)</span>
               </div>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Connected
-              </span>
+              {handyInstalled && handyRunning ? (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Active (Ctrl+Space)
+                </span>
+              ) : handyInstalled && !handyRunning ? (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  Installed (Idle)
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800/80 text-zinc-400 border border-zinc-700">
+                  Optional Companion
+                </span>
+              )}
             </div>
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Model: <span className="font-semibold text-zinc-200">{handyModelName}</span>. Press <kbd className="px-1 bg-black/40 rounded text-amber-200 font-mono text-[10px]">Ctrl+Space</kbd> anywhere.
-            </p>
-            {handyPostProcess && (
-              <div className="text-[10px] text-amber-300/90 font-mono flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-                <span>Local Gemma 3 4B Reframing Active</span>
-              </div>
+
+            {handyInstalled && handyRunning ? (
+              <>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Model: <span className="font-semibold text-zinc-200">{handyModelName || 'Parakeet Unified EN'}</span>. Press <kbd className="px-1 bg-black/40 rounded text-amber-200 font-mono text-[10px]">Ctrl+Space</kbd> anywhere in Windows.
+                </p>
+                {handyPostProcess && (
+                  <div className="text-[10px] text-amber-300/90 font-mono flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                    <span>Local Gemma 3 4B Reframing Active</span>
+                  </div>
+                )}
+              </>
+            ) : handyInstalled && !handyRunning ? (
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Handy is installed, but not currently running in the background. Launch Handy to enable global <kbd className="px-1 bg-black/40 rounded text-amber-200 font-mono text-[10px]">Ctrl+Space</kbd> speech dictation.
+              </p>
+            ) : (
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Optional open-source companion (<code className="font-mono text-zinc-300">cjpais/Handy</code>) for system-wide offline Whisper dictation. Unsaid's built-in browser mic works right out of the box with zero downloads.
+              </p>
             )}
           </div>
-          {handyInstalled && (
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <button
-                onClick={onOpenSettings}
-                className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 border border-zinc-700/80 transition"
-                title="Change Voice Model in Settings"
-              >
-                Switch Model
-              </button>
-              <button
-                onClick={launchHandy}
-                className="px-2 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-xs text-zinc-400 hover:text-zinc-200 transition"
-                title="Launch Handy voice app in background"
-              >
-                Launch App
-              </button>
-            </div>
-          )}
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {handyInstalled ? (
+              <>
+                <button
+                  onClick={onOpenSettings}
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 border border-zinc-700/80 transition"
+                  title="Change Voice Model in Settings"
+                >
+                  Switch Model
+                </button>
+                {!handyRunning ? (
+                  <button
+                    onClick={launchHandy}
+                    className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-xs text-amber-300 font-medium border border-amber-500/30 transition flex items-center gap-1"
+                    title="Launch Handy voice app in background"
+                  >
+                    <span>Launch Handy</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={launchHandy}
+                    className="px-2 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-xs text-zinc-400 hover:text-zinc-200 transition"
+                    title="Bring Handy window to front"
+                  >
+                    Bring to Front
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <a
+                  href="https://github.com/cjpais/Handy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 border border-zinc-700/80 transition"
+                >
+                  <span>Download Handy</span>
+                  <ExternalLink className="w-3 h-3 text-zinc-400" />
+                </a>
+                <button
+                  onClick={toggleMic}
+                  className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-xs font-medium text-amber-300 border border-amber-500/30 transition"
+                >
+                  Use Built-in Mic
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Terminal Shell Bridge Card */}

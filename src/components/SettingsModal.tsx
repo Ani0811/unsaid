@@ -24,7 +24,8 @@ import {
   Radio,
   Mic,
   Sparkles,
-  Check
+  Check,
+  ExternalLink
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -58,6 +59,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Handy Voice Model state
   const [handyData, setHandyData] = useState<{
     installed: boolean;
+    running?: boolean;
     selectedModel: string;
     postProcessConnected: boolean;
     postProcessEnabled: boolean;
@@ -475,49 +477,91 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
                     <Radio className="w-4 h-4 text-amber-400" />
-                    <span>Handy (Open Source Voice Dictation)</span>
+                    <span>Handy (Open Source Voice Companion)</span>
                   </div>
                   <span
                     className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                      handyData?.installed
+                      handyData?.installed && handyData?.running
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : handyData?.installed && !handyData?.running
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                         : 'bg-zinc-800 text-zinc-400 border-zinc-700'
                     }`}
                   >
-                    {handyData?.installed ? 'Installed & Ready' : 'Not Installed'}
+                    {handyData?.installed && handyData?.running
+                      ? 'Running & Active'
+                      : handyData?.installed && !handyData?.running
+                      ? 'Installed (Idle)'
+                      : 'Not Installed'}
                   </span>
                 </div>
 
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  Handy (<code className="font-mono text-zinc-300">cjpais/Handy</code>) runs local Whisper & Parakeet voice models offline with GPU/CPU acceleration.
-                </p>
+                {!handyData?.installed ? (
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      Handy (<code className="font-mono text-zinc-300">cjpais/Handy</code>) is an optional desktop companion for system-wide offline Whisper dictation via <kbd className="px-1.5 py-0.5 rounded bg-black/40 border border-zinc-700 text-amber-300 font-mono text-[11px]">Ctrl+Space</kbd>.
+                    </p>
 
-                <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
-                  <div className="flex items-center gap-1.5 text-zinc-300">
-                    <span className="text-zinc-500">Global Shortcut:</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 border border-zinc-700 text-amber-300 font-mono text-[11px]">
-                      Ctrl + Space
-                    </kbd>
-                  </div>
+                    <div className="p-3 rounded-lg bg-zinc-950/70 border border-zinc-800 text-xs space-y-1.5">
+                      <div className="flex items-center gap-2 text-emerald-400 font-medium">
+                        <Mic className="w-4 h-4 shrink-0" />
+                        <span>Built-in browser microphone is active</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 leading-relaxed">
+                        You do not need to download Handy! Unsaid comes with an in-app speech-to-text engine that runs directly in your browser. Just click <strong className="text-zinc-200 font-semibold">Voice Dictate</strong> above the reflection composer anytime.
+                      </p>
+                    </div>
 
-                  <div className="flex items-center gap-2 ml-auto">
-                    <button
-                      onClick={handleToggleHandy}
-                      className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-medium border border-amber-500/30 transition flex items-center gap-1"
-                      title="Trigger Handy dictation"
-                    >
-                      <Mic className="w-3 h-3" />
-                      <span>Test Dictate</span>
-                    </button>
-                    <button
-                      onClick={handleLaunchHandy}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition"
-                      title="Launch Handy"
-                    >
-                      Launch App
-                    </button>
+                    <div className="pt-1 flex items-center gap-2">
+                      <a
+                        href="https://github.com/cjpais/Handy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition"
+                      >
+                        <span>Download Handy from GitHub</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+                      </a>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      {handyData.running
+                        ? 'Handy is actively running. Press Ctrl+Space anywhere in Windows to dictate into Unsaid.'
+                        : 'Handy is installed, but the background process is not running. Launch it to enable the global shortcut.'}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
+                      <div className="flex items-center gap-1.5 text-zinc-300">
+                        <span className="text-zinc-500">Global Shortcut:</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-black/40 border border-zinc-700 text-amber-300 font-mono text-[11px]">
+                          Ctrl + Space
+                        </kbd>
+                      </div>
+
+                      <div className="flex items-center gap-2 ml-auto">
+                        {handyData.running && (
+                          <button
+                            onClick={handleToggleHandy}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-medium border border-amber-500/30 transition flex items-center gap-1"
+                            title="Trigger Handy dictation"
+                          >
+                            <Mic className="w-3 h-3" />
+                            <span>Test Dictate</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={handleLaunchHandy}
+                          className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition"
+                          title="Launch Handy"
+                        >
+                          {handyData.running ? 'Bring to Front' : 'Launch Handy'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Voice Models Selection */}
@@ -532,15 +576,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </span>
                 </div>
 
+                {!handyData?.installed && (
+                  <div className="p-3 rounded-lg bg-zinc-950/60 border border-zinc-800/80 text-xs text-zinc-400 flex items-center justify-between">
+                    <span>Install Handy to switch between local Whisper &amp; Parakeet models.</span>
+                    <span className="text-[11px] font-mono text-zinc-500">Offline Whisper Engine</span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-2.5">
                   {(handyData?.recommendedModels || []).map((m: any) => {
                     const isSelected = handyData?.selectedModel === m.id;
+                    const canSelect = !!handyData?.installed;
 
                     return (
                       <div
                         key={m.id}
                         className={`p-3.5 rounded-xl border transition flex items-center justify-between gap-3 ${
-                          isSelected
+                          isSelected && canSelect
                             ? 'bg-amber-500/10 border-amber-500/40 ring-1 ring-amber-500/20'
                             : 'bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700'
                         }`}
@@ -553,7 +605,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <span className="text-[10px] font-mono text-zinc-500 px-1.5 py-0.2 bg-black/30 rounded border border-zinc-800">
                               {m.size_mb} MB
                             </span>
-                            {isSelected && (
+                            {isSelected && canSelect && (
                               <span className="text-[10px] font-mono text-amber-400 bg-amber-400/10 px-1.5 py-0.2 rounded border border-amber-400/30">
                                 Active Model
                               </span>
@@ -565,15 +617,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
 
                         <button
-                          disabled={isSelected || isUpdatingHandy}
+                          disabled={!canSelect || isSelected || isUpdatingHandy}
                           onClick={() => handleSelectHandyModel(m.id)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${
-                            isSelected
+                            !canSelect
+                              ? 'bg-zinc-800/40 text-zinc-600 border border-zinc-800 cursor-not-allowed'
+                              : isSelected
                               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 cursor-default'
                               : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
                           }`}
                         >
-                          {isSelected ? (
+                          {!canSelect ? (
+                            'Requires Handy'
+                          ) : isSelected ? (
                             <span className="flex items-center gap-1">
                               <Check className="w-3 h-3" />
                               <span>Selected</span>
@@ -597,12 +653,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                   <span
                     className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                      handyData?.postProcessConnected
+                      handyData?.installed && handyData?.postProcessConnected
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                         : 'bg-zinc-800 text-zinc-400 border-zinc-700'
                     }`}
                   >
-                    {handyData?.postProcessConnected ? 'Connected (Gemma 3 4B)' : 'Not Connected'}
+                    {handyData?.installed && handyData?.postProcessConnected ? 'Connected (Gemma 3 4B)' : 'Not Connected'}
                   </span>
                 </div>
 
@@ -611,12 +667,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </p>
 
                 <button
-                  disabled={isUpdatingHandy}
+                  disabled={!handyData?.installed || isUpdatingHandy}
                   onClick={handleConnectLMStudioToHandy}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs transition flex items-center gap-1.5"
+                  className={`px-3 py-1.5 rounded-xl font-semibold text-xs transition flex items-center gap-1.5 ${
+                    !handyData?.installed
+                      ? 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'
+                      : 'bg-amber-500 hover:bg-amber-400 text-zinc-950'
+                  }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>{handyData?.postProcessConnected ? 'Re-Sync with LM Studio' : 'Connect Handy to LM Studio'}</span>
+                  <span>
+                    {!handyData?.installed
+                      ? 'Requires Handy Installation'
+                      : handyData?.postProcessConnected
+                      ? 'Re-Sync with LM Studio'
+                      : 'Connect Handy to LM Studio'}
+                  </span>
                 </button>
               </div>
             </div>
