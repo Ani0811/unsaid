@@ -1,5 +1,43 @@
 // Unsaid Documentation Interactive Script
 document.addEventListener('DOMContentLoaded', () => {
+  // Mobile drawer navigation toggle
+  const mobileToggle = document.getElementById('mobileNavToggle');
+  const sidebar = document.getElementById('docsSidebar');
+  const backdrop = document.getElementById('docsBackdrop');
+
+  function openSidebar() {
+    if (sidebar) sidebar.classList.add('open');
+    if (backdrop) backdrop.classList.add('open');
+  }
+
+  function closeSidebar() {
+    if (sidebar) sidebar.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
+  }
+
+  if (mobileToggle) {
+    mobileToggle.addEventListener('click', () => {
+      if (sidebar && sidebar.classList.contains('open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener('click', closeSidebar);
+  }
+
+  // Close sidebar drawer on link click in mobile view
+  document.querySelectorAll('.sidebar-link').forEach((link) => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
   // Copy code blocks
   document.querySelectorAll('.copy-btn').forEach((btn) => {
     btn.addEventListener('click', () => {

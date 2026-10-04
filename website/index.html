@@ -14,6 +14,9 @@
   <!-- Fixed Header -->
   <header class="docs-header">
     <div class="brand">
+      <button id="mobileNavToggle" class="mobile-menu-btn" aria-label="Toggle Navigation Menu">
+        <span>☰</span>
+      </button>
       <div class="brand-logo">🌿</div>
       <div class="brand-text">Unsaid</div>
       <span class="brand-badge">v1.0.0 Docs</span>
@@ -27,15 +30,18 @@
       <a href="http://localhost:5173" target="_blank" class="header-btn primary" title="Launch the Desktop Web App">
         <span>🖥 Open App</span>
       </a>
-      <a href="https://github.com/basutkar/unsaid" target="_blank" class="header-btn" title="View Source on GitHub">
+      <a href="https://github.com/basutkar/unsaid" target="_blank" class="header-btn github-btn" title="View Source on GitHub">
         <span>⭐ GitHub</span>
       </a>
     </div>
   </header>
 
+  <!-- Mobile Backdrop Overlay -->
+  <div id="docsBackdrop" class="docs-backdrop"></div>
+
   <div class="docs-layout">
     <!-- Left Navigation Sidebar -->
-    <aside class="docs-sidebar">
+    <aside class="docs-sidebar" id="docsSidebar">
       <div class="sidebar-group">
         <div class="sidebar-title">Getting Started</div>
         <ul class="sidebar-nav">

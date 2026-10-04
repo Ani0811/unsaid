@@ -25,20 +25,20 @@ export const DesktopStatusBar: React.FC<DesktopStatusBarProps> = ({
       aria-label="Desktop Status Bar"
     >
       {/* Left side: AI Engine & Sidebar Toggle */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           onClick={onToggleSidebar}
-          className="hover:text-zinc-300 transition flex items-center gap-1 text-[10px]"
+          className="hidden sm:flex hover:text-zinc-300 transition items-center gap-1 text-[10px]"
           title="Toggle Sidebar (Ctrl+B)"
         >
           <span>{isSidebarOpen ? '◧ Sidebar Open' : '◫ Sidebar Hidden'}</span>
         </button>
 
-        <span className="text-zinc-700">|</span>
+        <span className="hidden sm:inline text-zinc-700">|</span>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
           <span
-            className={`w-1.5 h-1.5 rounded-full ${
+            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
               isConnected
                 ? 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)]'
                 : connectionInfo.status === 'checking'
@@ -46,18 +46,18 @@ export const DesktopStatusBar: React.FC<DesktopStatusBarProps> = ({
                 : 'bg-zinc-600'
             }`}
           />
-          <span className={isConnected ? 'text-zinc-300' : 'text-zinc-500'}>
+          <span className={`truncate text-[10px] ${isConnected ? 'text-zinc-300' : 'text-zinc-500'}`}>
             {isConnected
-              ? `LM Studio :1234 (${connectionInfo.modelName || 'Gemma 2'})`
+              ? `LM Studio (${connectionInfo.modelName || 'Gemma 3 4B'})`
               : 'LM Studio Offline'}
           </span>
         </div>
 
         {activeMode && (
           <>
-            <span className="text-zinc-700">|</span>
-            <span className="text-amber-400/80 uppercase text-[10px]">
-              Active: {activeMode}
+            <span className="text-zinc-700 hidden xs:inline">|</span>
+            <span className="text-amber-400/80 uppercase text-[10px] hidden xs:inline">
+              {activeMode}
             </span>
           </>
         )}

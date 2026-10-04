@@ -136,13 +136,35 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     return null;
   }
 
+  const handleSelectConvo = (convo: Conversation) => {
+    onSelectConversation(convo);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      onToggle();
+    }
+  };
+
+  const handleNewReflection = () => {
+    onNewReflection();
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      onToggle();
+    }
+  };
+
   return (
-    <aside
-      className="w-72 sm:w-80 h-full flex flex-col bg-[#0f1016] border-r border-zinc-800/80 select-none text-zinc-300 shrink-0 z-20"
-      aria-label="Reflection Sidebar"
-    >
-      {/* Sidebar Header & New Button */}
-      <div className="p-3 border-b border-zinc-800/70 space-y-2.5">
+    <>
+      {/* Mobile Backdrop Overlay */}
+      <div
+        className="md:hidden fixed inset-0 bg-black/75 backdrop-blur-xs z-30 transition-opacity"
+        onClick={onToggle}
+        aria-hidden="true"
+      />
+
+      <aside
+        className="fixed md:relative inset-y-0 left-0 z-40 w-72 sm:w-80 h-full flex flex-col bg-[#0f1016] border-r border-zinc-800/80 select-none text-zinc-300 shrink-0 shadow-2xl md:shadow-none animate-in slide-in-from-left duration-200"
+        aria-label="Reflection Sidebar"
+      >
+        {/* Sidebar Header & New Button */}
+        <div className="p-3 border-b border-zinc-800/70 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-amber-500/20 to-purple-500/20 border border-zinc-700/60 flex items-center justify-center">
@@ -168,7 +190,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
         {/* Primary Action: New Reflection */}
         <button
-          onClick={onNewReflection}
+          onClick={handleNewReflection}
           className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs transition shadow-sm group"
         >
           <div className="flex items-center gap-2">
@@ -263,7 +285,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                       key={convo.id}
                       convo={convo}
                       isActive={convo.id === activeId}
-                      onSelect={() => onSelectConversation(convo)}
+                      onSelect={() => handleSelectConvo(convo)}
                       onDelete={() => onDeleteConversation(convo.id)}
                       getIcon={getModeIcon}
                       formatTime={formatRelativeTime}
@@ -285,7 +307,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                       key={convo.id}
                       convo={convo}
                       isActive={convo.id === activeId}
-                      onSelect={() => onSelectConversation(convo)}
+                      onSelect={() => handleSelectConvo(convo)}
                       onDelete={() => onDeleteConversation(convo.id)}
                       getIcon={getModeIcon}
                       formatTime={formatRelativeTime}
@@ -307,7 +329,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                       key={convo.id}
                       convo={convo}
                       isActive={convo.id === activeId}
-                      onSelect={() => onSelectConversation(convo)}
+                      onSelect={() => handleSelectConvo(convo)}
                       onDelete={() => onDeleteConversation(convo.id)}
                       getIcon={getModeIcon}
                       formatTime={formatRelativeTime}
@@ -403,6 +425,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         </div>
       </div>
     </aside>
+    </>
   );
 };
 

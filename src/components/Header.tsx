@@ -135,19 +135,21 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Right side: Native Desktop Controls */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Terminal Shell Bridge Control */}
-        <ShellBridgeControl
-          onToggleInAppShell={onToggleShell}
-          isInAppShellOpen={isShellOpen}
-          onRefreshData={onRefreshHistory}
-        />
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {/* Terminal Shell Bridge Control - Desktop only */}
+        <div className="hidden md:flex">
+          <ShellBridgeControl
+            onToggleInAppShell={onToggleShell}
+            isInAppShellOpen={isShellOpen}
+            onRefreshData={onRefreshHistory}
+          />
+        </div>
 
         {/* Ambient Soundscape Controller */}
         <SoundscapeControl />
 
-        {/* Documentation Toggle & Website Link */}
-        <div className="flex items-center rounded-lg bg-zinc-900 border border-zinc-800 p-0.5">
+        {/* Documentation Toggle & Website Link - Tablet/Desktop */}
+        <div className="hidden sm:flex items-center rounded-lg bg-zinc-900 border border-zinc-800 p-0.5">
           <button
             onClick={onToggleDocs}
             className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition ${
@@ -156,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
             title="Toggle Docs Hub"
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">{isDocsOpen ? 'Room' : 'Docs'}</span>
+            <span className="hidden md:inline">{isDocsOpen ? 'Room' : 'Docs'}</span>
           </button>
           <a
             href="/website/index.html"

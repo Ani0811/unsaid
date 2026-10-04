@@ -59,13 +59,21 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
     };
   }, []);
 
-  // Check Handy local bridge status
+  const [handyModelName, setHandyModelName] = useState<string>('Parakeet Unified EN 0.6B');
+  const [handyPostProcess, setHandyPostProcess] = useState<boolean>(false);
+
+  // Check Handy local bridge status and model
   useEffect(() => {
-    fetch('/api/handy/status')
+    fetch('/api/handy/models')
       .then((r) => r.json())
       .then((d) => {
-        if (d && typeof d.installed === 'boolean') {
-          setHandyInstalled(d.installed);
+        if (d) {
+          if (typeof d.installed === 'boolean') setHandyInstalled(d.installed);
+          if (d.postProcessConnected) setHandyPostProcess(true);
+          if (d.selectedModel) {
+            const match = d.recommendedModels?.find((m: any) => m.id === d.selectedModel);
+            setHandyModelName(match ? match.name : d.selectedModel.split('/').pop() || d.selectedModel);
+          }
         }
       })
       .catch(() => {});
@@ -471,23 +479,43 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
         {/* Handy Offline Voice Card */}
         <div className="p-4 rounded-xl bg-[#0f1016] border border-zinc-800/80 flex flex-col justify-between space-y-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-200">
-              <Radio className="w-4 h-4 text-amber-400" />
-              <span>Voice Agent & Handy Dictation</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-200">
+                <Radio className="w-4 h-4 text-amber-400" />
+                <span>Voice Model (Handy)</span>
+              </div>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Connected
+              </span>
             </div>
             <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Whisper speech-to-text with <kbd className="px-1 bg-black/40 rounded text-amber-200">Ctrl+Space</kbd> via Handy, plus soothing TTS voice agent playback.
+              Model: <span className="font-semibold text-zinc-200">{handyModelName}</span>. Press <kbd className="px-1 bg-black/40 rounded text-amber-200 font-mono text-[10px]">Ctrl+Space</kbd> anywhere.
             </p>
+            {handyPostProcess && (
+              <div className="text-[10px] text-amber-300/90 font-mono flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                <span>Local Gemma 3 4B Reframing Active</span>
+              </div>
+            )}
           </div>
           {handyInstalled && (
-            <button
-              onClick={launchHandy}
-              className="w-fit px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700/80 transition"
-              title="Launch Handy voice app in background"
-            >
-              Launch Handy
-            </button>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                onClick={onOpenSettings}
+                className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 border border-zinc-700/80 transition"
+                title="Change Voice Model in Settings"
+              >
+                Switch Model
+              </button>
+              <button
+                onClick={launchHandy}
+                className="px-2 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-xs text-zinc-400 hover:text-zinc-200 transition"
+                title="Launch Handy voice app in background"
+              >
+                Launch App
+              </button>
+            </div>
           )}
         </div>
 

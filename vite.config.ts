@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import { spawn } from 'node:child_process'
+import { spawn, execSync } from 'node:child_process'
 
 function unsaidBridgePlugin() {
   const storageDir = path.join(os.homedir(), '.unsaid')
@@ -182,25 +182,210 @@ function unsaidBridgePlugin() {
         }
 
         // Handy offline speech-to-text bridge status & launcher
+        const handyExePath = path.join(os.homedir(), 'AppData', 'Local', 'Handy', 'handy.exe')
+        const handyConfigPath = path.join(os.homedir(), 'AppData', 'Roaming', 'com.pais.handy', 'settings_store.json')
+
         if (req.url === '/api/handy/status' && req.method === 'GET') {
-          const handyPath = path.join(os.homedir(), 'AppData', 'Local', 'Handy', 'handy.exe')
-          const installed = fs.existsSync(handyPath)
+          const installed = fs.existsSync(handyExePath)
+          let selectedModel = ''
+          let postProcessConnected = false
+          if (fs.existsSync(handyConfigPath)) {
+            try {
+              const cfg = JSON.parse(fs.readFileSync(handyConfigPath, 'utf-8'))
+              selectedModel = cfg?.settings?.selected_model || ''
+              postProcessConnected = cfg?.settings?.post_process_models?.custom === 'google/gemma-3-4b'
+            } catch {}
+          }
           res.setHeader('Content-Type', 'application/json')
           return res.end(
             JSON.stringify({
               installed,
-              path: handyPath,
+              path: handyExePath,
               hotkey: 'Ctrl+Space',
-              model: 'Whisper (Local Vulkan / GGML)'
+              selectedModel: selectedModel || 'Default Whisper (Local Vulkan / GGML)',
+              postProcessConnected
             })
           )
         }
 
+        // Handy Models list & status
+        if (req.url === '/api/handy/models' && req.method === 'GET') {
+          const installed = fs.existsSync(handyExePath)
+          let selectedModel = ''
+          let postProcessConnected = false
+          let postProcessEnabled = false
+
+          if (fs.existsSync(handyConfigPath)) {
+            try {
+              const cfg = JSON.parse(fs.readFileSync(handyConfigPath, 'utf-8'))
+              selectedModel = cfg?.settings?.selected_model || ''
+              postProcessConnected = cfg?.settings?.post_process_models?.custom === 'google/gemma-3-4b'
+              postProcessEnabled = !!cfg?.settings?.post_process_enabled
+            } catch {}
+          }
+
+          let catalogModels: any[] = []
+          try {
+            if (installed) {
+              const raw = execSync(`"${handyExePath}" --list-models --json`, {
+                encoding: 'utf-8',
+                timeout: 5000,
+                stdio: ['ignore', 'pipe', 'ignore']
+              })
+              const jsonIdx = raw.indexOf('[')
+              if (jsonIdx >= 0) {
+                catalogModels = JSON.parse(raw.slice(jsonIdx))
+              }
+            }
+          } catch {}
+
+          const recommendedFallback = [
+            {
+              id: 'handy-computer/parakeet-unified-en-0.6b-gguf/parakeet-unified-en-0.6b-Q8_0.gguf',
+              name: 'Parakeet Unified EN 0.6B',
+              description: 'Fast, accurate live English transcription (Recommended)',
+              size_mb: 697,
+              speed_score: 0.79,
+              accuracy_score: 0.90,
+              is_downloaded: false
+            },
+            {
+              id: 'handy-computer/canary-180m-flash-gguf/canary-180m-flash-Q8_0.gguf',
+              name: 'Canary 180M Flash',
+              description: 'Tiny & instant, runs smoothly on any CPU or GPU',
+              size_mb: 208,
+              speed_score: 0.85,
+              accuracy_score: 0.82,
+              is_downloaded: false
+            },
+            {
+              id: 'handy-computer/whisper-medium-gguf/whisper-medium-Q8_0.gguf',
+              name: 'Whisper Medium',
+              description: 'Multilingual transcription with deep vocabulary',
+              size_mb: 793,
+              speed_score: 0.65,
+              accuracy_score: 0.92,
+              is_downloaded: false
+            },
+            {
+              id: 'handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf/nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf',
+              name: 'Nemotron Streaming 3.5',
+              description: 'Live multilingual transcription across 28 languages',
+              size_mb: 716,
+              speed_score: 0.75,
+              accuracy_score: 0.88,
+              is_downloaded: false
+            }
+          ]
+
+          const models = catalogModels.length > 0 ? catalogModels : recommendedFallback
+          const downloaded = models.filter((m: any) => m.is_downloaded)
+          const recommended = models.filter((m: any) => m.is_recommended || recommendedFallback.some((r) => r.id === m.id))
+
+          res.setHeader('Content-Type', 'application/json')
+          return res.end(
+            JSON.stringify({
+              installed,
+              selectedModel,
+              postProcessConnected,
+              postProcessEnabled,
+              downloadedModels: downloaded,
+              recommendedModels: recommended.length > 0 ? recommended : recommendedFallback,
+              allModelsCount: models.length
+            })
+          )
+        }
+
+        // Set active Handy Voice Model in settings_store.json
+        if (req.url === '/api/handy/select-model' && req.method === 'POST') {
+          let body = ''
+          req.on('data', (chunk: any) => (body += chunk))
+          req.on('end', () => {
+            try {
+              const { modelId } = JSON.parse(body || '{}')
+              if (!fs.existsSync(handyConfigPath)) {
+                res.statusCode = 404
+                return res.end(JSON.stringify({ error: 'Handy config not found' }))
+              }
+              const cfg = JSON.parse(fs.readFileSync(handyConfigPath, 'utf-8'))
+              if (!cfg.settings) cfg.settings = {}
+              cfg.settings.selected_model = modelId
+              fs.writeFileSync(handyConfigPath, JSON.stringify(cfg, null, 2))
+
+              res.setHeader('Content-Type', 'application/json')
+              return res.end(JSON.stringify({ success: true, selectedModel: modelId }))
+            } catch (err: unknown) {
+              res.statusCode = 500
+              const msg = err instanceof Error ? err.message : String(err)
+              return res.end(JSON.stringify({ error: msg }))
+            }
+          })
+          return
+        }
+
+        // Connect Handy Post-Processing to local LM Studio (google/gemma-3-4b)
+        if (req.url === '/api/handy/connect-lmstudio' && req.method === 'POST') {
+          try {
+            if (!fs.existsSync(handyConfigPath)) {
+              res.statusCode = 404
+              return res.end(JSON.stringify({ error: 'Handy config not found' }))
+            }
+            const cfg = JSON.parse(fs.readFileSync(handyConfigPath, 'utf-8'))
+            if (!cfg.settings) cfg.settings = {}
+
+            cfg.settings.post_process_enabled = true
+            cfg.settings.post_process_provider_id = 'custom'
+            if (!cfg.settings.post_process_models) cfg.settings.post_process_models = {}
+            cfg.settings.post_process_models.custom = 'google/gemma-3-4b'
+
+            if (Array.isArray(cfg.settings.post_process_providers)) {
+              const customProvider = cfg.settings.post_process_providers.find((p: any) => p.id === 'custom')
+              if (customProvider) {
+                customProvider.base_url = 'http://localhost:1234/v1'
+                customProvider.label = 'LM Studio (Local Gemma 3 4B)'
+              }
+            }
+
+            fs.writeFileSync(handyConfigPath, JSON.stringify(cfg, null, 2))
+
+            res.setHeader('Content-Type', 'application/json')
+            return res.end(
+              JSON.stringify({
+                success: true,
+                connected: true,
+                endpoint: 'http://localhost:1234/v1',
+                model: 'google/gemma-3-4b'
+              })
+            )
+          } catch (err: unknown) {
+            res.statusCode = 500
+            const msg = err instanceof Error ? err.message : String(err)
+            return res.end(JSON.stringify({ error: msg }))
+          }
+        }
+
+        // Toggle live Handy transcription shortcut in background
+        if (req.url === '/api/handy/toggle' && req.method === 'POST') {
+          try {
+            if (fs.existsSync(handyExePath)) {
+              spawn(handyExePath, ['--toggle-transcription'], { detached: true, stdio: 'ignore' }).unref()
+              res.setHeader('Content-Type', 'application/json')
+              return res.end(JSON.stringify({ toggled: true }))
+            } else {
+              res.statusCode = 404
+              return res.end(JSON.stringify({ error: 'Handy executable not found' }))
+            }
+          } catch (err: unknown) {
+            res.statusCode = 500
+            const msg = err instanceof Error ? err.message : String(err)
+            return res.end(JSON.stringify({ error: msg }))
+          }
+        }
+
         if (req.url === '/api/handy/launch' && req.method === 'POST') {
           try {
-            const handyPath = path.join(os.homedir(), 'AppData', 'Local', 'Handy', 'handy.exe')
-            if (fs.existsSync(handyPath)) {
-              spawn(handyPath, [], { detached: true, stdio: 'ignore' }).unref()
+            if (fs.existsSync(handyExePath)) {
+              spawn(handyExePath, [], { detached: true, stdio: 'ignore' }).unref()
               res.setHeader('Content-Type', 'application/json')
               return res.end(JSON.stringify({ launched: true }))
             } else {

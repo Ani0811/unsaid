@@ -20,7 +20,11 @@ import {
   Lock,
   Download,
   Upload,
-  EyeOff
+  EyeOff,
+  Radio,
+  Mic,
+  Sparkles,
+  Check
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -46,10 +50,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onDeleteAllData,
   onRefreshData
 }) => {
-  const [activeTab, setActiveTab] = useState<'ai' | 'security' | 'privacy' | 'about'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'voice' | 'security' | 'privacy' | 'about'>('ai');
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
+
+  // Handy Voice Model state
+  const [handyData, setHandyData] = useState<{
+    installed: boolean;
+    selectedModel: string;
+    postProcessConnected: boolean;
+    postProcessEnabled: boolean;
+    downloadedModels: any[];
+    recommendedModels: any[];
+  } | null>(null);
+  const [isUpdatingHandy, setIsUpdatingHandy] = useState(false);
+  const [handyNotice, setHandyNotice] = useState<string | null>(null);
 
   // App Lock local state
   const [hasPin, setHasPin] = useState(isAppLockConfigured);
@@ -60,6 +76,76 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Restore state
   const [restoreNotice, setRestoreNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load Handy models when modal opens or voice tab is active
+  React.useEffect(() => {
+    if (isOpen) {
+      fetch('/api/handy/models')
+        .then((r) => r.json())
+        .then((d) => setHandyData(d))
+        .catch(() => {});
+    }
+  }, [isOpen, activeTab]);
+
+  const handleSelectHandyModel = async (modelId: string) => {
+    setIsUpdatingHandy(true);
+    try {
+      const res = await fetch('/api/handy/select-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modelId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHandyData((prev) => (prev ? { ...prev, selectedModel: modelId } : null));
+        setHandyNotice('Voice model updated in Handy!');
+        setTimeout(() => setHandyNotice(null), 3000);
+      }
+    } catch {
+      setHandyNotice('Failed to update Handy model.');
+    } finally {
+      setIsUpdatingHandy(false);
+    }
+  };
+
+  const handleConnectLMStudioToHandy = async () => {
+    setIsUpdatingHandy(true);
+    try {
+      const res = await fetch('/api/handy/connect-lmstudio', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setHandyData((prev) =>
+          prev ? { ...prev, postProcessConnected: true, postProcessEnabled: true } : null
+        );
+        setHandyNotice('Handy connected to LM Studio (google/gemma-3-4b)!');
+        setTimeout(() => setHandyNotice(null), 4000);
+      }
+    } catch {
+      setHandyNotice('Failed to connect Handy to LM Studio.');
+    } finally {
+      setIsUpdatingHandy(false);
+    }
+  };
+
+  const handleToggleHandy = async () => {
+    try {
+      await fetch('/api/handy/toggle', { method: 'POST' });
+      setHandyNotice('Triggered Handy voice dictation. Speak now!');
+      setTimeout(() => setHandyNotice(null), 3500);
+    } catch {
+      setHandyNotice('Failed to trigger Handy.');
+    }
+  };
+
+  const handleLaunchHandy = async () => {
+    try {
+      await fetch('/api/handy/launch', { method: 'POST' });
+      setHandyNotice('Handy launched in background.');
+      setTimeout(() => setHandyNotice(null), 3000);
+    } catch {
+      setHandyNotice('Failed to launch Handy.');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -149,6 +235,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <Cpu className="w-3.5 h-3.5" />
             <span>Local AI</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('voice')}
+            className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-2 transition shrink-0 ${
+              activeTab === 'voice'
+                ? 'border-amber-400 text-amber-300 font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            <span>Voice & Handy</span>
           </button>
 
           <button
@@ -356,6 +454,170 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }
                   className="w-4 h-4 accent-amber-400 rounded cursor-pointer"
                 />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'voice' && (
+            <div className="space-y-6">
+              {/* Notice */}
+              {handyNotice && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{handyNotice}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Handy App Status */}
+              <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                    <Radio className="w-4 h-4 text-amber-400" />
+                    <span>Handy (Open Source Voice Dictation)</span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                      handyData?.installed
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                    }`}
+                  >
+                    {handyData?.installed ? 'Installed & Ready' : 'Not Installed'}
+                  </span>
+                </div>
+
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Handy (<code className="font-mono text-zinc-300">cjpais/Handy</code>) runs local Whisper & Parakeet voice models offline with GPU/CPU acceleration.
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
+                  <div className="flex items-center gap-1.5 text-zinc-300">
+                    <span className="text-zinc-500">Global Shortcut:</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 border border-zinc-700 text-amber-300 font-mono text-[11px]">
+                      Ctrl + Space
+                    </kbd>
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      onClick={handleToggleHandy}
+                      className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-medium border border-amber-500/30 transition flex items-center gap-1"
+                      title="Trigger Handy dictation"
+                    >
+                      <Mic className="w-3 h-3" />
+                      <span>Test Dictate</span>
+                    </button>
+                    <button
+                      onClick={handleLaunchHandy}
+                      className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition"
+                      title="Launch Handy"
+                    >
+                      Launch App
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Voice Models Selection */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Select Voice Recognition Model</span>
+                  </label>
+                  <span className="text-[11px] text-zinc-500 font-mono">
+                    {handyData?.recommendedModels?.length || 0} Models
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5">
+                  {(handyData?.recommendedModels || []).map((m: any) => {
+                    const isSelected = handyData?.selectedModel === m.id;
+
+                    return (
+                      <div
+                        key={m.id}
+                        className={`p-3.5 rounded-xl border transition flex items-center justify-between gap-3 ${
+                          isSelected
+                            ? 'bg-amber-500/10 border-amber-500/40 ring-1 ring-amber-500/20'
+                            : 'bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700'
+                        }`}
+                      >
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-zinc-200">
+                              {m.name}
+                            </span>
+                            <span className="text-[10px] font-mono text-zinc-500 px-1.5 py-0.2 bg-black/30 rounded border border-zinc-800">
+                              {m.size_mb} MB
+                            </span>
+                            {isSelected && (
+                              <span className="text-[10px] font-mono text-amber-400 bg-amber-400/10 px-1.5 py-0.2 rounded border border-amber-400/30">
+                                Active Model
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-zinc-400 truncate">
+                            {m.description}
+                          </p>
+                        </div>
+
+                        <button
+                          disabled={isSelected || isUpdatingHandy}
+                          onClick={() => handleSelectHandyModel(m.id)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${
+                            isSelected
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 cursor-default'
+                              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
+                          }`}
+                        >
+                          {isSelected ? (
+                            <span className="flex items-center gap-1">
+                              <Check className="w-3 h-3" />
+                              <span>Selected</span>
+                            </span>
+                          ) : (
+                            'Connect Model'
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Connect Handy to LM Studio Gemma */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/5 to-purple-500/5 border border-amber-500/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span>Handy + LM Studio AI Post-Processor</span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                      handyData?.postProcessConnected
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                    }`}
+                  >
+                    {handyData?.postProcessConnected ? 'Connected (Gemma 3 4B)' : 'Not Connected'}
+                  </span>
+                </div>
+
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  When you dictate with <kbd className="px-1.5 py-0.2 rounded bg-black/40 text-amber-300 font-mono text-[10px]">Ctrl+Shift+Space</kbd>, Handy can automatically send the raw speech transcript to your local LM Studio instance (<code className="font-mono text-zinc-300">google/gemma-3-4b</code>) to reframe racing thoughts into calm reflection.
+                </p>
+
+                <button
+                  disabled={isUpdatingHandy}
+                  onClick={handleConnectLMStudioToHandy}
+                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs transition flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{handyData?.postProcessConnected ? 'Re-Sync with LM Studio' : 'Connect Handy to LM Studio'}</span>
+                </button>
               </div>
             </div>
           )}
