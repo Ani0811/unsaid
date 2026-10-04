@@ -1,194 +1,270 @@
 # Unsaid 💭
 
-> **“A private place for the things you don't know how to say out loud.”**
+> **“A private place for the things you don't know how to say out loud.”**  
+> *Built for the Hacktoberfest 2026 DEV Weekend Challenge: “Build for a Friend.”*
 
-Built for the **Hacktoberfest 2026 DEV Weekend Challenge: “Build for a Friend.”**
+[![Local-First](https://img.shields.io/badge/Privacy-100%25%20Local--First-emerald.svg)](#why-local-ai)
+[![LM Studio](https://img.shields.io/badge/AI%20Engine-LM%20Studio%20(Gemma%203%204B)-amber.svg)](https://lmstudio.ai)
+[![Voice Companion](https://img.shields.io/badge/Voice-Handy%20(Offline%20Whisper)-sky.svg)](https://github.com/cjpais/Handy)
+[![Stack](https://img.shields.io/badge/Stack-React%2019%20%7C%20TypeScript%20%7C%20Vite%20%7C%20Node.js-purple.svg)](#architecture)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+---
+
+![Unsaid Desktop Dashboard](docs/images/dashboard.png)
+
+---
+
+## Table of Contents
+1. [What is Unsaid?](#what-is-unsaid)
+2. [Why Local-First AI?](#why-local-first-ai)
+3. [Architecture Overview](#architecture-overview)
+4. [The Three Reflection Frameworks](#the-three-reflection-frameworks)
+5. [Voice Agents & Offline Dictation (Handy)](#voice-agents--offline-dictation-handy)
+6. [Unsaid Terminal Shell (CLI)](#unsaid-terminal-shell-cli)
+7. [Desktop App & Responsive Experience](#desktop-app--responsive-experience)
+8. [Safety, Guardrails & Privacy Engine](#safety-guardrails--privacy-engine)
+9. [Documentation Website (`website/`)](#documentation-website-website)
+10. [Quick Start & Setup Guide](#quick-start--setup-guide)
+11. [Important Boundaries & Non-Goals](#important-boundaries--non-goals)
 
 ---
 
 ## What is Unsaid?
 
-We all have conversations that linger in our heads—things we wish we had said, thoughts that feel too chaotic to put into words, or feelings we aren't ready to share with anyone yet. 
+We all have conversations that linger unresolved in our heads—feelings we aren't ready to share with anyone yet, words we wish we could say to an estranged friend or parent, or thoughts so tangled that speaking them out loud feels daunting.
 
-**Unsaid** is a local-first personal reflection and conversation application. It offers a calm, private digital room to:
-- **TALK** through something weighing on your mind without unsolicited advice.
-- **UNLOAD** raw, messy thoughts without any expectation of solving or fixing them.
-- **UNSAID** explore words you wish you could say to another person, separating what you feel from assumptions about what they might think.
+Most digital journaling tools feel static, while mainstream cloud AI assistants frequently jump into unsolicited 5-step action lists, toxic positivity, or patronizing advice.
 
-The AI runs **entirely on your own computer** through **LM Studio** using open **Gemma** models.
+**Unsaid** is a private, local-first reflection sanctuary. It pairs an intentional conversational interface with local open-weights intelligence (**Google Gemma 3 4B** via **LM Studio**) and local speech tools (**Handy** offline Whisper) to give you a grounded, confidential sounding board.
 
 ---
 
-## Why Local AI?
+## Why Local-First AI?
 
-The thoughts we hesitate to say out loud are often our most vulnerable reflections. Sending them to a cloud AI SaaS platform means trusting third-party servers, opaque telemetry pipelines, model training regimes, and centralized data stores.
+The thoughts we hesitate to say out loud are often our most vulnerable reflections. Sending them to a commercial cloud AI API means trusting remote servers, telemetry trackers, model training pipelines, and centralized databases.
 
-Unsaid is designed around a single non-negotiable principle:
+Unsaid is anchored to a strict, non-negotiable architectural contract:
 
-> **Private by design. Your reflections stay on this device.**
-
-- **No accounts or sign-ups**
-- **No cloud databases**
-- **No telemetry or analytics tracking**
-- **No remote AI API calls**
-- **Local persistence via your browser's private `localStorage`**
-- **One-click "Delete all local data"** purge
-
-Your words never leave your hardware.
+* 🔒 **Zero Telemetry & Zero Cloud Calls:** Unsaid has no tracking pixels, remote database dependencies, or third-party cloud analytics.
+* 💻 **Runs 100% On-Device:** All AI inference is performed locally on your GPU/CPU via LM Studio.
+* 🎙️ **Private Speech Dictation:** Voice processing runs through open-source offline Whisper models via Handy or your browser's local speech engine.
+* 💾 **Dual Local Storage:** Data is stored strictly on your physical machine in browser `localStorage` and optionally synced to `~/.unsaid/reflections.json` for CLI access.
+* 🧹 **Instant Purge:** One-click "Delete All Local Data" immediately wipes all local database keys and caches.
 
 ---
 
-## Architecture
+## Architecture Overview
 
-```text
-┌────────────────────────────────────────────────────────┐
-│                        Unsaid                          │
-│               React 19 + TypeScript + Vite             │
-│                                                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │  TALK Mode   │  │ UNLOAD Mode  │  │ UNSAID Mode  │  │
-│  └──────────────┘  └──────────────┘  └──────┬───────┘  │
-│                                             │          │
-│  ┌───────────────────────────────┐          │          │
-│  │ Ambient Soundscape Generator  │          ▼          │
-│  │ (Rain · Hearth · Drone)       │   ┌──────────────┐  │
-│  └───────────────────────────────┘   │Letter Studio │  │
-│                                      └──────────────┘  │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │ Security Guardrails & Privacy Engine             │  │
-│  │ • Local App Lock (SHA-256 PIN Protection)        │  │
-│  │ • Imminent Crisis & Self-Harm Safety Layer       │  │
-│  │ • Prompt Injection & Clinical Boundary Defense   │  │
-│  │ • PII & Identity Masker (Local Redaction)        │  │
-│  └──────────────────────────────────────────────────┘  │
-│                                                        │
-│            Browser localStorage (Local Only)           │
-│            Full Backup & Restore (JSON Archive)        │
-└───────────────────────────┬────────────────────────────┘
-                            │
-                            │ Local HTTP / REST
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                      LM Studio                         │
-│            OpenAI-Compatible Local Endpoint            │
-│                 http://localhost:1234/v1               │
-└───────────────────────────┬────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                   Open Gemma Model                     │
-│    (e.g., gemma-2-2b-it, gemma-2-9b-it, gemma-3-1b)   │
-└────────────────────────────────────────────────────────┘
+Unsaid operates through a three-tier local architecture linking a desktop interface, a terminal shell, an offline voice bridge, and a local inference server:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                 UNSAID DESKTOP                                  │
+│                          React 19 + TypeScript + Vite                           │
+│                                                                                 │
+│   ┌───────────────────────────┐  ┌─────────────────────────┐  ┌──────────────┐  │
+│   │ Quick Reflection Composer │  │  Framework Navigation   │  │ Letter Studio│  │
+│   │ (Ctrl+Enter / Voice Mic)  │  │ (Talk · Unload · Unsaid)│  │ (Facts vs    │  │
+│   └─────────────┬─────────────┘  └────────────┬────────────┘  │  Assumptions)│  │
+│                 │                             │               └──────────────┘  │
+│   ┌─────────────▼─────────────────────────────▼──────────────────────────────┐  │
+│   │ Safe Guards & Defense Pipeline                                           │  │
+│   │ • Local SHA-256 App Lock PIN        • Prompt Injection & Jailbreak Guard │  │
+│   │ • Client-side PII Masker            • Imminent Crisis Intervention Layer │  │
+│   └───────────────────────────────────────────┬──────────────────────────────┘  │
+│                                               │                                 │
+│                   ┌───────────────────────────┴──────────────────────────────┐  │
+│                   │ Browser localStorage  ◄──►  ~/.unsaid/reflections.json   │  │
+│                   │              (Bidirectional Disk Sync)                   │  │
+│                   └───────────────────────────┬──────────────────────────────┘  │
+└───────────────────────────────────────────────┼─────────────────────────────────┘
+                                                │
+                 ┌──────────────────────────────┼──────────────────────────────┐
+                 │                              │                              │
+                 ▼                              ▼                              ▼
+┌──────────────────────────────┐ ┌──────────────────────────────┐ ┌──────────────────────────────┐
+│       UNSAID TERMINAL        │ │        HANDY BRIDGE          │ │          LM STUDIO           │
+│   Node.js CLI (`npm shell`)  │ │  Offline Whisper Speech-To-  │ │ Local OpenAI-Compatible Server│
+│ Realtime disk reflections &  │ │  Text (`Ctrl+Space`) + Gemma │ │   `http://localhost:1234/v1`  │
+│ interactive stream session   │ │  Reframing (`Ctrl+Shift+Spc`)│ │    Model: google/gemma-3-4b  │
+└──────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘
 ```
 
 ---
 
-## Core Modes
+## The Three Reflection Frameworks
 
-### 1. TALK — *Say what's on your mind.*
-The normal conversational mode. Unsaid acts as a gentle, grounded listener. It acknowledges what you are experiencing, asks gentle clarifying questions, and respects uncertainty. It intentionally avoids jumping to quick fixes, action items, or clinical labels.
+![Unsaid Chat Room](docs/images/chat.png)
 
-### 2. UNLOAD — *Get it out without needing to solve it.*
-Designed for when your mind is buzzing with overwhelm, frustration, or chaos. Unsaid serves as a quiet, safe container. It reflects core themes and holds space, explicitly refusing to give 5-step advice lists or unsolicited solutions.
+Unsaid organizes conversations into three distinct rooms, each calibrated with custom system prompts:
 
-### 3. UNSAID — *Explore what you wish you could say.*
-The distinctive reflection mode for unspoken words meant for a friend, partner, parent, coworker, or estranged person. Unsaid helps you:
-- Clarify what you truly wish the other person understood.
-- Distinguish concrete facts from assumptions.
-- Turn raw emotion into honest, authentic expression.
-- **Letter & Perspective Studio:** Convert your reflections into an unsent letter draft with a reality check comparing *"What I know for sure (Observed Facts)"* vs *"What I am assuming (Their mind / intent)"*.
-- **Critical rule:** It will never pretend to know what the other person secretly thinks or feels (e.g. *"We don't know how they would respond, but it sounds like you wish they knew how much the friendship meant to you"*).
+### 1. 💬 TALK THROUGH IT — *Say what's on your mind*
+* **Purpose:** A calm, paced conversation for working through an active dilemma.
+* **Behavior:** Gemma acts as a grounded listener. It mirrors emotional tone, asks clarifying questions, and respects pauses without jumping to quick fixes or solutions.
+
+### 2. 🌬️ JUST UNLOAD — *Stream of consciousness without fixing*
+* **Purpose:** For when your mind is racing, overwhelmed, or holding heavy emotions.
+* **Behavior:** Unsaid acts as a quiet witness. It holds space, summarizes core themes, and explicitly refrains from offering 5-step action plans or unsolicited advice.
+
+### 3. ✨ THE UNSAID — *Unsent letter & perspective studio*
+* **Purpose:** For unspoken thoughts directed toward another person (a friend, partner, parent, coworker, or estranged person).
+* **Behavior:** Helps clarify what you actually wish they knew, turns raw emotion into constructive expression, and keeps you anchored to reality.
+* **Letter & Perspective Studio:** Includes a dedicated modal that parses your reflections into two clear columns:
+  * **Observed Facts:** What happened in the physical world.
+  * **Assumptions:** What you are projecting onto their thoughts or intentions.
+  * Generates an unsent letter draft for your own closure or future conversation.
 
 ---
 
-## Desktop Shell & Native Launcher
+## Voice Agents & Offline Dictation (Handy)
 
-Unsaid can run either in your browser or as a standalone desktop application window:
+![Voice & Handy Settings](docs/images/settings-voice.png)
 
-### 1. One-Click Desktop Shell (Windows)
-Double-click `start-desktop.bat` or run:
+Speaking out loud often unlocks authentic emotions faster than typing. Unsaid provides a complete, local voice workflow:
+
+### 1. Handy Companion Integration (`cjpais/Handy`)
+Unsaid integrates seamlessly with [Handy](https://github.com/cjpais/Handy), an open-source local speech-to-text tool powered by `whisper.cpp` and Vulkan/Metal/CUDA acceleration:
+* **Global Shortcut (`Ctrl+Space`):** Press `Ctrl+Space` anywhere in Windows to speak freely; Handy transcribes your words directly into Unsaid's reflection composer.
+* **Curated Speech Models:** Select models like **Parakeet Unified EN 0.6B** (~697 MB, recommended for natural conversational flow) or **Canary 180M Flash** (~208 MB for instant zero-lag response) directly inside Unsaid's settings.
+* **LM Studio Thought Reframing (`Ctrl+Shift+Space`):** Handy can automatically pipe raw speech transcripts into local Gemma 3 4B to reframe racing thoughts into structured reflections.
+* **Honest Process Detection:** Unsaid monitors whether Handy is **Not Installed**, **Installed (Idle)**, or **Active & Running**—never displaying misleading connected badges or hotkey prompts if the application is not running.
+
+### 2. Zero-Download Built-in Microphone
+Don't want to install external software? Click **Voice Dictate** in the composer to use Unsaid's built-in browser speech recognition (`InAppSpeechRecognizer`) with zero downloads or configuration.
+
+### 3. Voice Agent (Read Aloud)
+Listen to your reflections read aloud with Unsaid's procedural text-to-speech player (`voiceAgent.ts`), allowing you to step back and hear your own thoughts from a third-person perspective.
+
+---
+
+## Unsaid Terminal Shell (CLI)
+
+![Unsaid CLI Shell](docs/images/cli-shell.png)
+
+Prefer living in the terminal? Unsaid includes a complete terminal client built with Node.js, Chalk, and Ink:
+
 ```bash
-npm run desktop
+# Launch the interactive terminal shell
+npm run shell
 ```
-This automatically boots the local background server and opens Unsaid in a chromeless, standalone desktop window with native system integration, custom resolution, and zero extra Electron overhead!
 
-### 2. Cross-Platform Electron Shell
-The repository also includes `desktop/main.cjs` configured for native Electron window wrappers.
+* **Interactive Reflection Sessions:** Start Talk, Unload, or Unsaid sessions directly inside your terminal with real-time text streaming.
+* **Bi-directional Disk Sync:** CLI reflections save instantly to `~/.unsaid/reflections.json` and sync with the desktop app in real time via Server-Sent Events (SSE).
+* **Terminal Commands:**
+  ```bash
+  unsaid talk       # Start a guided reflection session
+  unsaid unload     # Dump stream-of-consciousness thoughts
+  unsaid unsaid     # Practice difficult unspoken conversations
+  unsaid history    # Browse past saved reflections in your terminal
+  unsaid export     # Export all notes to markdown files
+  ```
 
 ---
 
-## Security Guardrails & Privacy Features
+## Desktop App & Responsive Experience
+
+![Mobile Sidebar Drawer](docs/images/mobile.png)
+
+Unsaid is designed to feel like a premium, native desktop application while remaining fully responsive across tablets, foldables, and mobile screens:
+
+* **Desktop Application Window:** Launch with `start-desktop.bat` or `npm run desktop` to run in a dedicated, chromeless native window.
+* **Collapsible Desktop Sidebar:** Quick access to all three modes, recent reflection history, documentation, and settings.
+* **Mobile Slide-Over Navigation:** Smooth touch-friendly drawer on smaller screens with backdrop blur.
+* **Native Desktop Status Bar:** Displays LM Studio connection status, active model (`Gemma 3 4B`), local storage indicators, reflection counts, and shortcut hints (`Ctrl+B`, `Ctrl+N`).
+
+---
+
+## Safety, Guardrails & Privacy Engine
+
+Because reflections can touch on sensitive topics, Unsaid includes five client-side safety guardrails:
 
 1. **Local App Lock (PIN Protection):**
-   - Secure your room with a 4-8 digit PIN stored as a salted SHA-256 hash in local storage.
-   - Immediate lock button in the top navigation bar.
-   - Configurable auto-lock inactivity timer (1 min, 5 min, 15 min, 1 hour).
-2. **Prompt Injection & Clinical Boundary Guardrails:**
-   - Detects adversarial system overrides, jailbreak attempts, and demands for clinical/medical diagnoses.
-   - Automatically intercepts and delivers a grounded, non-prescriptive response.
-3. **PII & Identity Masker:**
-   - Optional client-side scrubber that redacts real names, emails, phone numbers, and IDs before passing text to the model or storage.
-4. **Crisis Safety Layer:**
-   - Detects imminent crisis or self-harm, stops conversational generation, and delivers 24/7 free helpline resources (988 US/CA, Crisis Text Line 741741, UK 111 / 116 123, and [findahelpline.com](https://findahelpline.com)).
-5. **Backup & Restore:**
-   - Download a full JSON archive of all local reflections and settings.
-   - Restore past backups on any device without cloud dependence.
-6. **Ambient Soundscapes:**
-   - Procedural Web Audio API sound generator with zero downloads:
-     - 🌧️ **Gentle Rain**
-     - 🔥 **Warm Hearth / Fireplace**
-     - 🎶 **Serene Drone Chords**
+   * Encrypt your local session with a 4–8 digit PIN hashed locally with salted **SHA-256**.
+   * Configurable inactivity auto-lock (1 min, 5 min, 15 min, 1 hr).
+2. **Prompt Injection & Clinical Boundary Defense:**
+   * Detects adversarial system overrides, role reversal jailbreaks, and requests for clinical psychiatric diagnoses.
+   * Gracefully redirects back to personal, non-clinical reflection.
+3. **Client-Side PII Masker:**
+   * Scrub real names, email addresses, phone numbers, and identifying credentials before they touch the model or local disk.
+4. **Crisis Safety Intervention Layer:**
+   * Intercepts explicit self-harm or crisis ideation, stops AI generation, and delivers 24/7 confidential crisis helplines (988 US/CA, Crisis Text Line 741741, UK 111/116 123, and [findahelpline.com](https://findahelpline.com)).
+5. **Procedural Ambient Soundscapes:**
+   * Built-in Web Audio API sound synthesizer with zero external audio assets:
+     * 🌧️ **Gentle Rain** (Brownian noise filter)
+     * 🔥 **Warm Hearth** (Perlin crackle synthesizer)
+     * 🎶 **Serene Drone** (Binaural sine wave chord)
 
 ---
 
-## Getting Started
+## Documentation Website (`website/`)
+
+The repository includes a standalone documentation website in the `/website` directory:
+* **Interactive Guide:** Step-by-step instructions for setting up LM Studio, choosing Gemma models, and configuring Handy.
+* **Prompt Engineering Reference:** Complete transparency into the system prompts and emotional guardrails powering each reflection mode.
+* **Offline Access:** Open `website/index.html` in any browser or click **Docs & Guides** inside the desktop app.
+
+---
+
+## Quick Start & Setup Guide
 
 ### Prerequisites
-
 1. **Node.js** (v18 or higher)
 2. **LM Studio** ([lmstudio.ai](https://lmstudio.ai))
-3. An open **Gemma** model downloaded in LM Studio (recommended: `gemma-2-2b-it` or `gemma-2-9b-it`)
+3. An open **Gemma** model loaded in LM Studio (recommended: `google/gemma-3-4b` or `gemma-2-2b-it`)
+4. *(Optional)* **Handy** ([github.com/cjpais/Handy](https://github.com/cjpais/Handy)) for offline `Ctrl+Space` dictation.
 
 ---
 
-### Step-by-Step Setup
+### Step 1: Clone & Install
 
-#### 1. Clone the repository
 ```bash
 git clone https://github.com/your-username/unsaid.git
 cd unsaid
-```
-
-#### 2. Install dependencies
-```bash
 npm install
 ```
 
-#### 3. Start LM Studio & Load Gemma
-1. Open **LM Studio**.
-2. Search for and download **Gemma 2** (e.g., `google/gemma-2-2b-it-GGUF` or `gemma-2-9b-it-GGUF`).
-3. Navigate to the **Local Server** tab (the `<->` icon on the left bar).
-4. Select your loaded Gemma model at the top.
-5. Click **Start Server** (default port: `1234`, endpoint: `http://localhost:1234/v1`).
+---
 
-#### 4. Run Unsaid
-- **Desktop Window:** Run `start-desktop.bat` or `npm run desktop`
-- **Browser:** Run `npm run dev` and open `http://localhost:5173`
+### Step 2: Configure LM Studio
 
-*(Note: Unsaid also includes an optional "Offline Preview Simulator" in Settings so you can test all 3 modes and the complete UI flow even before downloading a model).*
+1. Open **LM Studio** and search for **Gemma 3 4B** (`google/gemma-3-4b`).
+2. Download the model (the `Q4_K_M` or `Q8_0` GGUF quantization is recommended).
+3. Navigate to the **Developer / Local Server** tab (the `<->` icon on the left bar).
+4. Select `google/gemma-3-4b` from the top dropdown and click **Start Server**.
+5. Server will listen on `http://localhost:1234/v1`.
 
 ---
 
-## Important Positioning & Limitations
+### Step 3: Run Unsaid
 
-- **Not medical care:** Unsaid is **not** an AI therapist, counselor, psychologist, medical application, or diagnostic system.
-- **No diagnosis:** Unsaid will never diagnose mental health conditions or issue clinical evaluations.
-- **Reflection, not authority:** Unsaid is an automated companion to help you organize your own thoughts before you decide how to act in your real life.
+**Option A: Dedicated Desktop Window (Windows)**
+```bash
+# Double click start-desktop.bat or run:
+npm run desktop
+```
+
+**Option B: Web Browser**
+```bash
+npm run dev
+# Open http://localhost:5173
+```
+
+**Option C: Terminal Shell (CLI)**
+```bash
+npm run shell
+```
+
+---
+
+## Important Boundaries & Non-Goals
+
+* **Not Mental Health Care:** Unsaid is **not** an AI therapist, licensed counselor, psychologist, medical diagnostic tool, or clinical intervention.
+* **No Prescriptive Diagnosis:** Unsaid will never diagnose mental conditions or prescribe treatment.
+* **Reflection, Not Authority:** Unsaid is an automated companion designed to help you clarify your own feelings before taking action in your real life.
 
 ---
 
 ## License
 
 MIT License. Built with ❤️ for friends who need a safe place for the things left unsaid.
-#   u n s a i d  
- 
