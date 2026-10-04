@@ -6,7 +6,7 @@ const STORAGE_SETTINGS_KEY = 'unsaid_settings_v1';
 
 export const DEFAULT_SETTINGS: Settings = {
   baseUrl: (import.meta.env.VITE_LM_STUDIO_BASE_URL as string) || 'http://localhost:1234/v1',
-  model: (import.meta.env.VITE_LM_STUDIO_MODEL as string) || '',
+  model: (import.meta.env.VITE_LM_STUDIO_MODEL as string) || 'google/gemma-3-4b',
   temperature: 0.7,
   useProxy: true, // Uses Vite's /api/lmstudio proxy to prevent CORS issues if browser blocks localhost
   demoModeFallback: false

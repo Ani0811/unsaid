@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Mode, Conversation, ConnectionInfo } from '../types';
+import { InAppSpeechRecognizer } from '../audio/speechRecognition';
 import {
   MessageSquare,
   Wind,
@@ -8,7 +9,10 @@ import {
   Terminal,
   BookOpen,
   ExternalLink,
-  Settings
+  Settings,
+  Mic,
+  MicOff,
+  Radio
 } from 'lucide-react';
 
 interface DesktopDashboardProps {
@@ -31,6 +35,58 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
   onToggleShell
 }) => {
   const [scratchText, setScratchText] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [handyInstalled, setHandyInstalled] = useState(true);
+  const recognizerRef = useRef<InAppSpeechRecognizer | null>(null);
+
+  // Check Handy local bridge status
+  useEffect(() => {
+    fetch('/api/handy/status')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && typeof d.installed === 'boolean') {
+          setHandyInstalled(d.installed);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Initialize Speech Recognizer
+  useEffect(() => {
+    const recognizer = new InAppSpeechRecognizer();
+    recognizer.setCallbacks(
+      (transcribed) => {
+        setScratchText((prev) => {
+          const separator = prev.trim() ? ' ' : '';
+          return prev + separator + transcribed;
+        });
+      },
+      (listening) => setIsListening(listening),
+      (err) => console.warn('Speech recognition notice:', err)
+    );
+    recognizerRef.current = recognizer;
+
+    return () => {
+      recognizer.stop();
+    };
+  }, []);
+
+  const toggleMic = () => {
+    if (!recognizerRef.current) return;
+    if (isListening) {
+      recognizerRef.current.stop();
+    } else {
+      recognizerRef.current.start();
+    }
+  };
+
+  const launchHandy = async () => {
+    try {
+      await fetch('/api/handy/launch', { method: 'POST' });
+    } catch (e) {
+      console.warn('Could not launch Handy:', e);
+    }
+  };
 
   // Format today's date
   const [todayStr] = useState(() =>
@@ -44,6 +100,9 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
   const recentItems = recentConversations.slice(0, 3);
 
   const handleStartWithMode = (mode: Mode) => {
+    if (isListening && recognizerRef.current) {
+      recognizerRef.current.stop();
+    }
     onSelectMode(mode, scratchText.trim() ? scratchText.trim() : undefined);
     setScratchText('');
   };
@@ -122,21 +181,62 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
 
       {/* Main Composer / Scratchpad */}
       <section className="bg-[#12131b] border border-zinc-800/80 rounded-2xl p-5 shadow-xl space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
-            Quick Reflection Composer
-          </span>
-          <span className="text-[11px] text-zinc-500 font-mono">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">Ctrl+Enter</kbd> to talk
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
+              Quick Reflection Composer
+            </span>
+
+            {/* Handy Offline Voice Badge */}
+            <div
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-300"
+              title="Handy offline Whisper: Press Ctrl+Space anywhere in Windows to dictate"
+            >
+              <Radio className="w-3 h-3 text-amber-400" />
+              <span>Handy: <kbd className="px-1 bg-black/40 rounded text-amber-200">Ctrl+Space</kbd></span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* In-App Mic Push-to-Talk Toggle */}
+            <button
+              type="button"
+              onClick={toggleMic}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
+                isListening
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
+                  : 'bg-zinc-900 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 border-zinc-800'
+              }`}
+              title={isListening ? 'Click to stop listening' : 'Dictate with in-app microphone'}
+            >
+              {isListening ? (
+                <MicOff className="w-3.5 h-3.5 text-rose-400" />
+              ) : (
+                <Mic className="w-3.5 h-3.5 text-amber-400" />
+              )}
+              <span>{isListening ? 'Listening...' : 'Voice Dictate'}</span>
+            </button>
+
+            <span className="hidden sm:inline text-[11px] text-zinc-500 font-mono">
+              Press <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">Ctrl+Enter</kbd> to talk
+            </span>
+          </div>
         </div>
+
+        {/* Live Listening Banner */}
+        {isListening && (
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 animate-in fade-in duration-200">
+            <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+            <span className="font-medium">Listening to your voice... Speak your thoughts freely.</span>
+          </div>
+        )}
 
         <textarea
           value={scratchText}
           onChange={(e) => setScratchText(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={4}
-          placeholder="What's on your mind right now? Start typing to reflect, unload thoughts, or practice what you wish you could say..."
+          placeholder="What's on your mind right now? Start typing, press Ctrl+Space for Handy, or click Voice Dictate above..."
           className="w-full bg-[#0a0b0f] border border-zinc-800/90 rounded-xl p-4 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500/50 transition resize-none leading-relaxed"
         />
 
@@ -313,23 +413,45 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
         </section>
       )}
 
-      {/* Desktop Tools & CLI Bridge Footer Card */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+      {/* Desktop Tools, Voice & CLI Bridge Footer Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+        {/* Handy Offline Voice Card */}
+        <div className="p-4 rounded-xl bg-[#0f1016] border border-zinc-800/80 flex flex-col justify-between space-y-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-200">
+              <Radio className="w-4 h-4 text-amber-400" />
+              <span>Handy Voice Dictation</span>
+            </div>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Offline speech-to-text with local Whisper. Press <kbd className="px-1 bg-black/40 rounded text-amber-200">Ctrl+Space</kbd> anywhere.
+            </p>
+          </div>
+          {handyInstalled && (
+            <button
+              onClick={launchHandy}
+              className="w-fit px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700/80 transition"
+              title="Launch Handy voice app in background"
+            >
+              Launch Handy
+            </button>
+          )}
+        </div>
+
         {/* Terminal Shell Bridge Card */}
-        <div className="p-4 rounded-xl bg-[#0f1016] border border-zinc-800/80 flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-[#0f1016] border border-zinc-800/80 flex flex-col justify-between space-y-3">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-200">
               <Terminal className="w-4 h-4 text-amber-400" />
               <span>Unsaid CLI Shell</span>
             </div>
-            <p className="text-[11px] text-zinc-400">
-              Run <code className="font-mono text-zinc-300">npm run shell</code> in your terminal.
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Run <code className="font-mono text-zinc-300">npm run shell</code> in your terminal. Real-time disk sync.
             </p>
           </div>
           {onToggleShell && (
             <button
               onClick={onToggleShell}
-              className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700/80 transition"
+              className="w-fit px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700/80 transition"
             >
               Open Shell
             </button>
@@ -337,21 +459,21 @@ export const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
         </div>
 
         {/* Documentation Card */}
-        <div className="p-4 rounded-xl bg-[#0f1016] border border-zinc-800/80 flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-[#0f1016] border border-zinc-800/80 flex flex-col justify-between space-y-3">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-200">
               <BookOpen className="w-4 h-4 text-sky-400" />
-              <span>Application Documentation</span>
+              <span>Docs & Guides (website/)</span>
             </div>
-            <p className="text-[11px] text-zinc-400">
-              Complete setup guide, Gemma prompts & guardrails.
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Complete setup guide, Gemma 3 4B prompts, Handy voice & guardrails.
             </p>
           </div>
           <a
             href="/website/index.html"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700/80 transition"
+            className="w-fit flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700/80 transition"
           >
             <span>View Docs</span>
             <ExternalLink className="w-3 h-3 text-zinc-400" />

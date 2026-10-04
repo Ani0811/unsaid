@@ -60,6 +60,7 @@
           <li><a href="#lm-studio" class="sidebar-link"><span class="icon">🧠</span> LM Studio & Gemma</a></li>
           <li><a href="#cli-shell" class="sidebar-link"><span class="icon">⌨️</span> Unsaid CLI Shell</a></li>
           <li><a href="#bridge" class="sidebar-link"><span class="icon">🔄</span> Desktop-CLI Bridge</a></li>
+          <li><a href="#voice-agents" class="sidebar-link"><span class="icon">🎙️</span> Voice Agents & Handy</a></li>
         </ul>
       </div>
 
@@ -401,6 +402,48 @@ unsaid</code></pre>
           <li>The Desktop App checks the lightweight file timestamp or receives live updates through the internal API endpoint.</li>
           <li>New reflections appear automatically with a <code>&gt;_ Shell</code> origin tag in the sidebar.</li>
         </ol>
+      </section>
+
+      <!-- Section: Voice Agents & Handy -->
+      <section id="voice-agents" class="docs-section">
+        <div class="section-header">
+          <h2 class="section-title">🎙️ Voice Agents & Handy Offline Dictation</h2>
+          <p class="section-lead">Speak your raw thoughts out loud with zero cloud audio leakage.</p>
+        </div>
+
+        <p>
+          Speaking thoughts out loud often accesses deeper emotions than typing. Unsaid pairs directly with <strong>Handy</strong> (<a href="https://github.com/cjpais/Handy" target="_blank" style="color: var(--accent-amber); text-decoration: underline;">cjpais/Handy</a>)—a native, open-source offline speech-to-text tool powered by <strong>whisper.cpp</strong> and Vulkan:
+        </p>
+
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon amber">⚡</div>
+            <h3 class="card-title">Handy Global Hotkey</h3>
+            <p class="card-desc">Press <kbd>Ctrl</kbd> + <kbd>Space</kbd> anywhere. Speak freely into your mic, and Handy's local Whisper model types the words straight into Unsaid's reflection composer.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon sky">🎙️</div>
+            <h3 class="card-title">In-App Voice Dictate</h3>
+            <p class="card-desc">Click the built-in microphone button on the desktop composer or chat interface for instant in-browser voice input with live audio activity indicators.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon emerald">🔒</div>
+            <h3 class="card-title">100% Offline Audio</h3>
+            <p class="card-desc">Unlike cloud voice assistants, your audio is transcribed directly on your local CPU or GPU. Zero voice recordings or acoustic profiles ever leave your machine.</p>
+          </div>
+        </div>
+
+        <div class="code-container">
+          <div class="code-header">
+            <span>Voice Reflection Workflow</span>
+            <button class="copy-btn">Copy</button>
+          </div>
+          <pre><code>1. Open Unsaid Desktop App (npm run dev or npm run desktop).
+2. Handy Companion runs in the background (or click "Launch Handy" in Unsaid).
+3. Press Ctrl + Space to dictate your thoughts out loud.
+4. Watch your words stream into the Quick Reflection Composer.
+5. Press Ctrl + Enter or click "Talk Through It" to reflect with Gemma 3 4B!</code></pre>
+        </div>
       </section>
 
       <!-- Section: Security & Guardrails -->

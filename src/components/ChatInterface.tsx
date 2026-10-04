@@ -3,6 +3,7 @@ import type { Mode, Message, ConnectionInfo } from '../types';
 import { MODES } from '../modes';
 import { SafetyBanner } from './SafetyBanner';
 import { LetterStudio } from './LetterStudio';
+import { InAppSpeechRecognizer } from '../audio/speechRecognition';
 import {
   Send,
   Trash2,
@@ -13,7 +14,10 @@ import {
   User,
   ShieldCheck,
   AlertCircle,
-  FileText
+  FileText,
+  Mic,
+  MicOff,
+  Radio
 } from 'lucide-react';
 
 interface ChatInterfaceProps {
@@ -41,6 +45,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isLetterStudioOpen, setIsLetterStudioOpen] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognizerRef = useRef<InAppSpeechRecognizer | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -50,6 +56,35 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating]);
+
+  // Speech recognizer setup
+  useEffect(() => {
+    const recognizer = new InAppSpeechRecognizer();
+    recognizer.setCallbacks(
+      (transcribed) => {
+        setInput((prev) => {
+          const sep = prev.trim() ? ' ' : '';
+          return prev + sep + transcribed;
+        });
+      },
+      (listening) => setIsListening(listening),
+      (err) => console.warn('Speech recognition notice in chat:', err)
+    );
+    recognizerRef.current = recognizer;
+
+    return () => {
+      recognizer.stop();
+    };
+  }, []);
+
+  const toggleMic = () => {
+    if (!recognizerRef.current) return;
+    if (isListening) {
+      recognizerRef.current.stop();
+    } else {
+      recognizerRef.current.start();
+    }
+  };
 
   // Auto-resize textarea
   useEffect(() => {
@@ -360,16 +395,48 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             className="w-full bg-transparent text-zinc-100 placeholder-zinc-500 text-sm px-4 pt-3.5 pb-12 rounded-2xl resize-none focus:outline-none leading-relaxed"
           />
 
+          {/* Live Listening Banner */}
+          {isListening && (
+            <div className="mx-4 mt-2 mb-1 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 animate-in fade-in duration-150">
+              <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+              <span>Listening to voice... Speak your reflection.</span>
+            </div>
+          )}
+
           <div className="absolute bottom-2.5 left-4 right-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/80" />
               <span className="hidden sm:inline">Stored only in your browser</span>
+
+              {/* Handy Voice Badge */}
+              <div
+                className="hidden md:flex items-center gap-1 text-[10px] font-mono text-amber-300/90 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20"
+                title="Handy local Whisper: Press Ctrl+Space anytime in Windows to dictate"
+              >
+                <Radio className="w-2.5 h-2.5 text-amber-400" />
+                <span>Handy: <kbd className="text-amber-200">Ctrl+Space</kbd></span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="hidden sm:inline text-[11px] text-zinc-500">
                 Shift + Enter for new line
               </span>
+
+              {/* In-App Mic Toggle */}
+              <button
+                type="button"
+                onClick={toggleMic}
+                className={`flex items-center justify-center w-8 h-8 rounded-xl border transition ${
+                  isListening
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
+                    : 'bg-zinc-900 text-zinc-400 hover:text-amber-300 hover:bg-zinc-800 border-zinc-800'
+                }`}
+                title={isListening ? 'Stop listening' : 'Dictate with in-app microphone'}
+              >
+                {isListening ? <MicOff className="w-4 h-4 text-rose-400" /> : <Mic className="w-4 h-4" />}
+              </button>
+
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isGenerating}

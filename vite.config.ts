@@ -181,6 +181,39 @@ function unsaidBridgePlugin() {
           }
         }
 
+        // Handy offline speech-to-text bridge status & launcher
+        if (req.url === '/api/handy/status' && req.method === 'GET') {
+          const handyPath = path.join(os.homedir(), 'AppData', 'Local', 'Handy', 'handy.exe')
+          const installed = fs.existsSync(handyPath)
+          res.setHeader('Content-Type', 'application/json')
+          return res.end(
+            JSON.stringify({
+              installed,
+              path: handyPath,
+              hotkey: 'Ctrl+Space',
+              model: 'Whisper (Local Vulkan / GGML)'
+            })
+          )
+        }
+
+        if (req.url === '/api/handy/launch' && req.method === 'POST') {
+          try {
+            const handyPath = path.join(os.homedir(), 'AppData', 'Local', 'Handy', 'handy.exe')
+            if (fs.existsSync(handyPath)) {
+              spawn(handyPath, [], { detached: true, stdio: 'ignore' }).unref()
+              res.setHeader('Content-Type', 'application/json')
+              return res.end(JSON.stringify({ launched: true }))
+            } else {
+              res.statusCode = 404
+              return res.end(JSON.stringify({ error: 'Handy executable not found' }))
+            }
+          } catch (err: unknown) {
+            res.statusCode = 500
+            const msg = err instanceof Error ? err.message : String(err)
+            return res.end(JSON.stringify({ error: msg }))
+          }
+        }
+
         // Redirect /docs and /website to /website/index.html
         if (req.url === '/docs' || req.url === '/docs/' || req.url === '/website' || req.url === '/website/') {
           res.writeHead(302, { Location: '/website/index.html' })

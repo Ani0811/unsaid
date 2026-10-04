@@ -111,7 +111,7 @@ export async function generateReflection(
   ];
 
   const payload = {
-    model: settings.model || 'gemma',
+    model: settings.model || 'google/gemma-3-4b',
     messages: formattedMessages,
     temperature: settings.temperature ?? 0.7,
     stream: !!onChunk

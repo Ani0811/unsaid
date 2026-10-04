@@ -32,7 +32,7 @@ const STORAGE_FILE = path.join(STORAGE_DIR, 'reflections.json');
 
 const LM_STUDIO_URL = process.env.VITE_LM_STUDIO_BASE_URL || 'http://localhost:1234/v1';
 const DESKTOP_URL = process.env.VITE_DESKTOP_URL || 'http://localhost:5173';
-let activeModel = process.env.VITE_LM_STUDIO_MODEL || '';
+let activeModel = process.env.VITE_LM_STUDIO_MODEL || 'google/gemma-3-4b';
 let piiMasking = false;
 let currentMode = null; // 'talk' | 'unload' | 'unsaid' | null
 let desktopOnline = false;
@@ -139,6 +139,7 @@ ${C.amber}   \\___/|_| |_|___/\\__,_|_|\\__,_|${C.reset}    ${C.emerald}● Disk
 `);
   console.log(`${C.dim}────────────────────────────────────────────────────────────────────────────${C.reset}`);
   console.log(`  Commands: ${C.bold}help${C.reset}, ${C.amber}talk${C.reset}, ${C.sky}unload${C.reset}, ${C.purple}unsaid${C.reset}, ${C.emerald}app${C.reset} (open desktop), ${C.emerald}open <#>${C.reset}, ${C.white}sync${C.reset}`);
+  console.log(`  Voice Input: Press ${C.bold}${C.amber}Ctrl+Space${C.reset} (Handy Whisper) to dictate reflections offline`);
   console.log(`${C.dim}────────────────────────────────────────────────────────────────────────────${C.reset}\n`);
 }
 
